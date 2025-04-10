@@ -1,11 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
-export default function VerifyPhone() {
+function VerifyPhoneContent() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [countdown, setCountdown] = useState(120);
   const [canResend, setCanResend] = useState(false);
@@ -14,7 +14,6 @@ export default function VerifyPhone() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Get phone number from URL params
     const phone = searchParams.get("phone");
     if (phone) {
       setPhoneNumber(phone);
@@ -121,5 +120,19 @@ export default function VerifyPhone() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function VerifyPhone() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          Loading verification...
+        </div>
+      }
+    >
+      <VerifyPhoneContent />
+    </Suspense>
   );
 }
