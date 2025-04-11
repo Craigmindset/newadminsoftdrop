@@ -10,17 +10,40 @@ export function validateEnv() {
     `);
   }
 
-  if (supabaseUrl.includes("/auth/v1")) {
+  // Clean and validate URL
+  let cleanUrl = supabaseUrl
+    .replace(/\/auth\/v1$/, "") // Remove auth suffix if present
+    .replace(/\/$/, ""); // Remove trailing slash
+
+  if (!cleanUrl.startsWith("https://")) {
+    cleanUrl = `https://${cleanUrl.replace(/^https?:\/\//, "")}`;
+  }
+
+  // Validate final URL format
+  if (!/^https:\/\/[a-zA-Z0-9-]+\.supabase\.co$/.test(cleanUrl)) {
     throw new Error(`
-      Invalid Supabase URL format detected.
-      Remove '/auth/v1' from your URL.
-      Current: ${supabaseUrl}
-      Should be: https://[project-ref].supabase.co
+      Invalid Supabase URL format.
+      Received: ${supabaseUrl}
+      Cleaned: ${cleanUrl}
+      Expected format: https://[project-ref].supabase.co
     `);
   }
 
   return {
-    supabaseUrl,
+    supabaseUrl: cleanUrl,
     supabaseKey,
   };
+}
+
+// Runtime check (only in development)
+if (process.env.NODE_ENV === "development") {
+  try {
+    const { supabaseUrl } = validateEnv();
+    console.log("Supabase URL validated:", supabaseUrl);
+  } catch (error) {
+    console.error(
+      "Environment configuration error:",
+      error instanceof Error ? error.message : "Unknown error"
+    );
+  }
 }
