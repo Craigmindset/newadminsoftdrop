@@ -1,13 +1,18 @@
-import { logoutUser } from "@/app/actions/local-login";
 import { NextResponse } from "next/server";
+import { logoutUser } from "../../actions/local-login";
 
 export async function POST() {
   try {
-    const response = await logoutUser();
-    return response;
-  } catch (error) {
+    const { error } = await logoutUser();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: error.message || "Logout failed" },
       { status: 500 }
     );
   }
