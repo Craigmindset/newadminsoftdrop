@@ -396,7 +396,7 @@ export function SiteFooter() {
                   href="/login/carrier"
                   className="text-base hover:text-gray-300 leading-tight"
                 >
-                  Carrier Login2
+                  Carrier Login
                 </Link>
               </li>
               <li>
