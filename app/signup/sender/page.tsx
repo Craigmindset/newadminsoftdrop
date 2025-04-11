@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Phone } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function SenderSignup() {
   const [phone, setPhone] = useState("");
@@ -21,7 +22,8 @@ export default function SenderSignup() {
         formattedValue = input.substring(0, 4) + " " + input.substring(4);
       }
       if (input.length > 7) {
-        formattedValue = formattedValue.substring(0, 8) + " " + formattedValue.substring(8);
+        formattedValue =
+          formattedValue.substring(0, 8) + " " + formattedValue.substring(8);
       }
       e.target.value = formattedValue.trim();
     }
@@ -36,9 +38,22 @@ export default function SenderSignup() {
     }
   }, [phone]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (phone.length === 11) {
+    if (phone.length !== 11) return;
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: formattedPhone,
+      });
+
+      if (error) throw error;
+
+      router.push(
+        `/signup/sender/verify?phone=${encodeURIComponent(formattedPhone)}`
+      );
+    } catch (err) {
+      console.error("Error sending OTP:", err);
       router.push(
         `/signup/sender/verify?phone=${encodeURIComponent(formattedPhone)}`
       );
