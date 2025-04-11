@@ -1,49 +1,60 @@
-export function validateEnv() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+function cleanSupabaseUrl(url: string): string {
+  // Remove variable name prefix if present
+  let cleanUrl = url
+    .replace(/^NEXT_PUBLIC_SUPABASE_URL=/, "")
+    .trim()
+    .replace(/\/auth\/v1$/, "")
+    .replace(/\/$/, "");
 
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error(`
-      Missing Supabase configuration:
-      - NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? "Set" : "Not set"}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseKey ? "Set" : "Not set"}
-    `);
-  }
-
-  // Clean and validate URL
-  let cleanUrl = supabaseUrl
-    .replace(/\/auth\/v1$/, "") // Remove auth suffix if present
-    .replace(/\/$/, ""); // Remove trailing slash
-
+  // Ensure https protocol
   if (!cleanUrl.startsWith("https://")) {
     cleanUrl = `https://${cleanUrl.replace(/^https?:\/\//, "")}`;
   }
 
-  // Validate final URL format
-  if (!/^https:\/\/[a-zA-Z0-9-]+\.supabase\.co$/.test(cleanUrl)) {
+  return cleanUrl;
+}
+
+export function validateEnv() {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!rawUrl || !rawKey) {
     throw new Error(`
-      Invalid Supabase URL format.
-      Received: ${supabaseUrl}
-      Cleaned: ${cleanUrl}
+      Missing Supabase configuration:
+      - NEXT_PUBLIC_SUPABASE_URL: ${rawUrl ? "Set" : "Not set"}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY: ${rawKey ? "Set" : "Not set"}
+    `);
+  }
+
+  const supabaseUrl = cleanSupabaseUrl(rawUrl);
+  const supabaseKey = rawKey
+    .replace(/^NEXT_PUBLIC_SUPABASE_ANON_KEY=/, "")
+    .trim();
+
+  if (!/^https:\/\/[a-zA-Z0-9-]+\.supabase\.co$/.test(supabaseUrl)) {
+    throw new Error(`
+      Invalid Supabase URL format after cleaning.
+      Original: ${rawUrl}
+      Cleaned: ${supabaseUrl}
       Expected format: https://[project-ref].supabase.co
     `);
   }
 
   return {
-    supabaseUrl: cleanUrl,
+    supabaseUrl,
     supabaseKey,
   };
 }
 
-// Runtime check (only in development)
+// Runtime check (development only)
 if (process.env.NODE_ENV === "development") {
   try {
     const { supabaseUrl } = validateEnv();
-    console.log("Supabase URL validated:", supabaseUrl);
+    console.log("Validated Supabase URL:", supabaseUrl);
   } catch (error) {
     console.error(
-      "Environment configuration error:",
-      error instanceof Error ? error.message : "Unknown error"
+      "Environment Configuration Error:",
+      error instanceof Error ? error.message : error
     );
   }
 }
