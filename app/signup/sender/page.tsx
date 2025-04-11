@@ -1,64 +1,59 @@
-"use client";
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Phone } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+"use client"
+import React, { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Phone } from "lucide-react"
+import { supabase } from "@/lib/supabase"
 
 export default function SenderSignup() {
-  const [phone, setPhone] = useState("");
-  const [formattedPhone, setFormattedPhone] = useState("");
-  const router = useRouter();
+  const [phone, setPhone] = useState("")
+  const [formattedPhone, setFormattedPhone] = useState("")
+  const router = useRouter()
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value.replace(/\D/g, "");
+    const input = e.target.value.replace(/\D/g, "")
     if (input.length <= 11) {
-      setPhone(input);
+      setPhone(input)
       // Format with spaces as user types
-      let formattedValue = input;
+      let formattedValue = input
       if (input.length > 3) {
-        formattedValue = input.substring(0, 4) + " " + input.substring(4);
+        formattedValue = input.substring(0, 4) + " " + input.substring(4)
       }
       if (input.length > 7) {
-        formattedValue =
-          formattedValue.substring(0, 8) + " " + formattedValue.substring(8);
+        formattedValue = formattedValue.substring(0, 8) + " " + formattedValue.substring(8)
       }
-      e.target.value = formattedValue.trim();
+      e.target.value = formattedValue.trim()
     }
-  };
+  }
 
   useEffect(() => {
     if (phone.length === 11) {
-      const formatted = `+234${phone.substring(1)}`;
-      setFormattedPhone(formatted);
+      const formatted = `+234${phone.substring(1)}`
+      setFormattedPhone(formatted)
     } else {
-      setFormattedPhone("");
+      setFormattedPhone("")
     }
-  }, [phone]);
+  }, [phone])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (phone.length !== 11) return;
-
+    e.preventDefault()
+    if (phone.length !== 11) return
+    
     try {
       const { error } = await supabase.auth.signInWithOtp({
         phone: formattedPhone,
-      });
+      })
 
-      if (error) throw error;
-
-      router.push(
-        `/signup/sender/verify?phone=${encodeURIComponent(formattedPhone)}`
-      );
+      if (error) throw error
+      
+      router.push(`/signup/sender/verify?phone=${encodeURIComponent(formattedPhone)}`)
     } catch (err) {
-      console.error("Error sending OTP:", err);
-      router.push(
-        `/signup/sender/verify?phone=${encodeURIComponent(formattedPhone)}`
-      );
+      console.error("Error sending OTP:", err)
+      router.push(`/signup/sender/verify?phone=${encodeURIComponent(formattedPhone)}`)
     }
-  };
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
@@ -114,5 +109,5 @@ export default function SenderSignup() {
         </div>
       </div>
     </div>
-  );
+  )
 }

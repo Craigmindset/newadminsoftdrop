@@ -1,39 +1,40 @@
-"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { signUpCarrier } from "../actions/carrier-auth";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
+"use client"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { signUpCarrier } from '../actions/carrier-auth'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
 
 export default function CarrierCreatePassword({ phone }: { phone: string }) {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
+    e.preventDefault()
+    setError('')
+    
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
+      setError('Passwords do not match')
+      return
     }
 
     try {
-      setLoading(true);
-      const { data, error } = await signUpCarrier(phone, password);
+      setLoading(true)
+      const { data, error } = await signUpCarrier(phone, password)
 
-      if (error) throw error;
+      if (error) throw error
 
-      router.push("/dashboard");
+      // Redirect to KYC verification after successful signup
+      router.push('/signup/carrier/kyc')
     } catch (err: any) {
-      setError(err.message || "Account creation failed");
+      setError(err.message || 'Account creation failed')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="space-y-4">
@@ -54,10 +55,14 @@ export default function CarrierCreatePassword({ phone }: { phone: string }) {
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
         />
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Creating..." : "Create Account"}
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={loading}
+        >
+          {loading ? 'Creating...' : 'Create Account'}
         </Button>
       </form>
     </div>
-  );
+  )
 }

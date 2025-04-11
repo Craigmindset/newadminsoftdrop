@@ -1,64 +1,60 @@
-"use client";
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ArrowLeft } from "lucide-react";
+"use client"
+import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ArrowLeft } from 'lucide-react'
 
 export default function VerifyPhone() {
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const phone = searchParams.get("phone") || "";
-  const isResetFlow = searchParams.get("reset") === "true";
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const phone = searchParams.get('phone') || ''
+  const isResetFlow = searchParams.get('reset') === 'true'
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = otp.join("");
-    if (code.length !== 6) return;
+    e.preventDefault()
+    const code = otp.join('')
+    if (code.length !== 6) return
 
     try {
-      setLoading(true);
+      setLoading(true)
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         phone,
         token: code,
-        type: "sms",
-      });
+        type: 'sms'
+      })
 
-      if (verifyError) throw verifyError;
+      if (verifyError) throw verifyError
 
       // Handle password reset flow
       if (isResetFlow) {
-        return router.push(
-          `/reset-password?access_token=${data.session?.access_token}`
-        );
+        return router.push(`/reset-password?access_token=${data.session?.access_token}`)
       }
 
       // Normal signup flow
-      router.push(
-        `/signup/sender/create-password?phone=${encodeURIComponent(phone)}`
-      );
+      router.push(`/signup/sender/create-password?phone=${encodeURIComponent(phone)}`)
     } catch (err: any) {
-      setError(err?.message || "Invalid verification code");
+      setError(err?.message || 'Invalid verification code')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleOtpChange = (index: number, value: string) => {
     if (/^\d*$/.test(value) && value.length <= 1) {
-      const newOtp = [...otp];
-      newOtp[index] = value;
-      setOtp(newOtp);
+      const newOtp = [...otp]
+      newOtp[index] = value
+      setOtp(newOtp)
       if (value && index < 5) {
-        const nextInput = document.getElementById(`otp-${index + 1}`);
-        if (nextInput) nextInput.focus();
+        const nextInput = document.getElementById(`otp-${index + 1}`)
+        if (nextInput) nextInput.focus()
       }
     }
-  };
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
@@ -71,7 +67,7 @@ export default function VerifyPhone() {
             <ArrowLeft size={24} className="text-gray-500" />
           </button>
           <h1 className="text-2xl font-bold text-gray-900 ml-2">
-            {isResetFlow ? "Reset Password" : "Verify Phone Number"}
+            {isResetFlow ? 'Reset Password' : 'Verify Phone Number'}
           </h1>
         </div>
 
@@ -101,12 +97,12 @@ export default function VerifyPhone() {
           <Button
             type="submit"
             className="w-full h-12 bg-green-600 hover:bg-green-700 text-lg font-medium"
-            disabled={otp.some((d) => d === "") || loading}
+            disabled={otp.some(d => d === '') || loading}
           >
-            {loading ? "Verifying..." : "Verify"}
+            {loading ? 'Verifying...' : 'Verify'}
           </Button>
         </form>
       </div>
     </div>
-  );
+  )
 }

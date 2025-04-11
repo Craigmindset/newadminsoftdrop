@@ -1,57 +1,51 @@
-"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Phone } from "lucide-react";
-import Link from "next/link";
+"use client"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Phone } from 'lucide-react'
+import Link from 'next/link'
 
 export default function ForgotPassword() {
-  const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-  const router = useRouter();
+  const [phone, setPhone] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSuccess(false);
-
+    e.preventDefault()
+    setError('')
+    setSuccess(false)
+    
     if (!phone || phone.length !== 11) {
-      setError("Please enter a valid 11-digit phone number");
-      return;
+      setError('Please enter a valid 11-digit phone number')
+      return
     }
 
     try {
-      setLoading(true);
-      const formattedPhone = `+234${phone.substring(1)}`;
-
+      setLoading(true)
+      const formattedPhone = `+234${phone.substring(1)}`
+      
       const { error: otpError } = await supabase.auth.signInWithOtp({
         phone: formattedPhone,
         options: {
-          shouldCreateUser: false,
-        },
-      });
+          shouldCreateUser: false
+        }
+      })
 
-      if (otpError) throw otpError;
-
-      setSuccess(true);
-      router.push(
-        `/signup/sender/verify?phone=${encodeURIComponent(
-          formattedPhone
-        )}&reset=true`
-      );
+      if (otpError) throw otpError
+      
+      setSuccess(true)
+      router.push(`/signup/sender/verify?phone=${encodeURIComponent(formattedPhone)}&reset=true`)
     } catch (err: any) {
-      setError(
-        err.message || "Failed to send verification code. Please try again."
-      );
-      console.error("Password reset error:", err);
+      setError(err.message || 'Failed to send verification code. Please try again.')
+      console.error('Password reset error:', err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
@@ -65,9 +59,7 @@ export default function ForgotPassword() {
 
         {success ? (
           <div className="text-center space-y-4">
-            <p className="text-green-600">
-              Verification code sent successfully!
-            </p>
+            <p className="text-green-600">Verification code sent successfully!</p>
             <p className="text-sm text-gray-500">
               Check your messages for the verification code.
             </p>
@@ -82,7 +74,7 @@ export default function ForgotPassword() {
                 pattern="[0-9]*"
                 placeholder="0812 345 6789"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                 className="h-12 pl-10 text-lg"
                 maxLength={11}
                 required
@@ -96,11 +88,11 @@ export default function ForgotPassword() {
               className="w-full h-12 bg-green-600 hover:bg-green-700 text-lg font-medium"
               disabled={loading}
             >
-              {loading ? "Sending code..." : "Send Verification Code"}
+              {loading ? 'Sending code...' : 'Send Verification Code'}
             </Button>
 
             <div className="text-center text-sm text-gray-500">
-              Remember your password?{" "}
+              Remember your password?{' '}
               <Link
                 href="/login"
                 className="font-medium text-green-600 hover:text-green-700"
@@ -112,5 +104,5 @@ export default function ForgotPassword() {
         )}
       </div>
     </div>
-  );
+  )
 }

@@ -1,50 +1,48 @@
-"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { verifyCarrierOtp } from "@/app/actions/carrier-auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+"use client"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { verifyCarrierOtp } from '@/app/actions/carrier-auth'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export default function CarrierOtpVerification({ phone }: { phone: string }) {
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
 
   const handleOtpChange = (index: number, value: string) => {
     if (/^\d*$/.test(value) && value.length <= 1) {
-      const newOtp = [...otp];
-      newOtp[index] = value;
-      setOtp(newOtp);
-
+      const newOtp = [...otp]
+      newOtp[index] = value
+      setOtp(newOtp)
+      
       // Auto-focus next input
       if (value && index < 5) {
-        const nextInput = document.getElementById(`otp-${index + 1}`);
-        if (nextInput) nextInput.focus();
+        const nextInput = document.getElementById(`otp-${index + 1}`)
+        if (nextInput) nextInput.focus()
       }
     }
-  };
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = otp.join("");
-    if (code.length !== 6) return;
+    e.preventDefault()
+    const code = otp.join('')
+    if (code.length !== 6) return
 
     try {
-      setLoading(true);
-      const { error } = await verifyCarrierOtp(phone, code);
+      setLoading(true)
+      const { error } = await verifyCarrierOtp(phone, code)
 
-      if (error) throw error;
-
-      router.push(
-        `/signup/carrier/create-password?phone=${encodeURIComponent(phone)}`
-      );
+      if (error) throw error
+      
+      router.push(`/signup/carrier/create-password?phone=${encodeURIComponent(phone)}`)
     } catch (err: any) {
-      setError(err.message || "Verification failed. Please try again.");
+      setError(err.message || 'Verification failed. Please try again.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -52,7 +50,7 @@ export default function CarrierOtpVerification({ phone }: { phone: string }) {
       <p className="text-sm text-gray-500">
         Enter the 6-digit code sent to {phone}
       </p>
-
+      
       {error && <p className="text-red-500">{error}</p>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -75,11 +73,11 @@ export default function CarrierOtpVerification({ phone }: { phone: string }) {
         <Button
           type="submit"
           className="w-full"
-          disabled={otp.some((d) => d === "") || loading}
+          disabled={otp.some(d => d === '') || loading}
         >
-          {loading ? "Verifying..." : "Verify"}
+          {loading ? 'Verifying...' : 'Verify'}
         </Button>
       </form>
     </div>
-  );
+  )
 }
