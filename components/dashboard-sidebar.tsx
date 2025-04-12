@@ -49,12 +49,12 @@ export function DashboardSidebar({ onMenuItemClick }: DashboardSidebarProps) {
     },
     {
       name: "Carriers",
-      href: "/dashboard/carriers",
+      href: "#",
       icon: Truck,
     },
     {
       name: "Sender Academy",
-      href: "/sender-academy",
+      href: "#",
       icon: BookOpen,
     },
     {
