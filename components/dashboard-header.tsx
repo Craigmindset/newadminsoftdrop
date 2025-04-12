@@ -35,9 +35,11 @@ export function DashboardHeader({
           <Button variant="ghost" size="icon">
             <span className="text-lg">🔔</span>
           </Button>
-          <Button variant="ghost" size="icon">
-            <span className="text-lg">👤</span>
-          </Button>
+          <Link href="/dashboard/profile">
+            <Button variant="ghost" size="icon">
+              <span className="text-lg">👤</span>
+            </Button>
+          </Link>
         </div>
       </div>
     </header>
