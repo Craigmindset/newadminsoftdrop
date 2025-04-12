@@ -4,9 +4,15 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 // Removed icons import since the module wasn't found
 
-export function DashboardHeader() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+interface DashboardHeaderProps {
+  mobileMenuOpen: boolean;
+  setMobileMenuOpen: (open: boolean) => void;
+}
 
+export function DashboardHeader({
+  mobileMenuOpen,
+  setMobileMenuOpen,
+}: DashboardHeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b bg-background">
       <div className="container flex h-16 items-center justify-between">
