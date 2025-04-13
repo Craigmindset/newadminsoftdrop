@@ -23,13 +23,13 @@ import { useRouter } from "next/navigation";
 
 // Updated mock data for demonstration
 const mockStats = {
-  totalUsers: 13460,
-  activeCarriers: 280,
-  activeSenders: 168,
-  pendingDisputes: 18,
+  totalUsers: 32812,
+  activeCarriers: 18520,
+  activeSenders: 13292,
+  pendingDisputes: 618,
   totalTransactions: 4587,
-  revenue: 124580,
-  weeklyGrowth: 12.5,
+  revenue: 4672003,
+  weeklyGrowth: 14.5,
 };
 
 export default function AdminDashboard() {
