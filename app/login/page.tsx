@@ -73,7 +73,7 @@ export default function LoginPage() {
                 type="tel"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="0812 345 6789"
+                placeholder="08xxxxxxxxx"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                 className="h-12 pl-10 text-lg"
