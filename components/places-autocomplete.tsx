@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Loader2, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { toast } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 
 interface PlacesAutocompleteProps {
   onPlaceSelect: (place: google.maps.places.PlaceResult) => void
@@ -32,6 +32,7 @@ export default function PlacesAutocomplete({
   const [loading, setLoading] = useState(false)
   const [scriptLoaded, setScriptLoaded] = useState(false)
   const [gettingCurrentLocation, setGettingCurrentLocation] = useState(false)
+  const { toast } = useToast()
 
   // Load the Google Maps script
   useEffect(() => {
@@ -68,6 +69,10 @@ export default function PlacesAutocomplete({
       types: ["address"],
     })
 
+    // Improve mobile experience by setting sessionToken
+    const sessionToken = new window.google.maps.places.AutocompleteSessionToken()
+    autocomplete.setOptions({ sessionToken })
+
     autocomplete.addListener("place_changed", () => {
       const place = autocomplete.getPlace()
       if (place) {
@@ -93,6 +98,12 @@ export default function PlacesAutocomplete({
     }
 
     setGettingCurrentLocation(true)
+
+    // Show feedback to user
+    toast({
+      title: "Getting your location",
+      description: "Please allow location access when prompted",
+    })
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -122,6 +133,11 @@ export default function PlacesAutocomplete({
 
                 setValue(results[0].formatted_address)
                 onPlaceSelect(place)
+
+                toast({
+                  title: "Location found",
+                  description: "Your current location has been set as the pickup point",
+                })
               } else {
                 toast({
                   title: "Error",
@@ -146,13 +162,13 @@ export default function PlacesAutocomplete({
 
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = "Location permission denied"
+            errorMessage = "Location permission denied. Please enable location services in your device settings."
             break
           case error.POSITION_UNAVAILABLE:
-            errorMessage = "Location information unavailable"
+            errorMessage = "Location information unavailable. Please try again."
             break
           case error.TIMEOUT:
-            errorMessage = "Location request timed out"
+            errorMessage = "Location request timed out. Please try again."
             break
         }
 
@@ -162,7 +178,8 @@ export default function PlacesAutocomplete({
           variant: "destructive",
         })
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      // Optimize for mobile: increase timeout and reduce accuracy requirements
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 },
     )
   }
 
@@ -174,10 +191,14 @@ export default function PlacesAutocomplete({
             ref={inputRef}
             type="text"
             placeholder={placeholder}
-            className={className}
+            className={`${className} pr-10`} // Add padding for the loading indicator
             value={value}
             onChange={(e) => setValue(e.target.value)}
             disabled={loading || gettingCurrentLocation}
+            // Improve mobile experience
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck="false"
           />
           {loading && (
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -194,7 +215,7 @@ export default function PlacesAutocomplete({
             onClick={getCurrentLocation}
             disabled={loading || gettingCurrentLocation}
             title="Use current location"
-            className="flex-shrink-0"
+            className="flex-shrink-0 h-10 w-10" // Ensure consistent size on mobile
           >
             {gettingCurrentLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
           </Button>

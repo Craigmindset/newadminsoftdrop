@@ -280,25 +280,30 @@ export default function SendItemPage() {
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Pickup & Delivery Locations</h3>
 
-              <div>
+              <div className="space-y-1">
                 <Label htmlFor="pickup-location">Pickup Location</Label>
-                <PlacesAutocomplete
-                  placeholder="Search for pickup address"
-                  onPlaceSelect={handlePickupPlaceSelect}
-                  className="mt-1"
-                  defaultValue={pickupLocation}
-                  showCurrentLocation={true}
-                />
+                <div className="mt-1">
+                  <PlacesAutocomplete
+                    placeholder="Search for pickup address"
+                    onPlaceSelect={handlePickupPlaceSelect}
+                    defaultValue={pickupLocation}
+                    showCurrentLocation={true}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Click the location pin to use your current location
+                </p>
               </div>
 
-              <div>
+              <div className="space-y-1">
                 <Label htmlFor="drop-location">Drop Location</Label>
-                <PlacesAutocomplete
-                  placeholder="Search for delivery address"
-                  onPlaceSelect={handleDropPlaceSelect}
-                  className="mt-1"
-                  defaultValue={dropLocation}
-                />
+                <div className="mt-1">
+                  <PlacesAutocomplete
+                    placeholder="Search for delivery address"
+                    onPlaceSelect={handleDropPlaceSelect}
+                    defaultValue={dropLocation}
+                  />
+                </div>
               </div>
             </div>
 
@@ -327,7 +332,7 @@ export default function SendItemPage() {
                       className="hidden"
                       onChange={handleImageChange}
                     />
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground truncate max-w-[150px]">
                       {itemImage ? itemImage.name : "No file chosen"}
                     </span>
                   </div>
