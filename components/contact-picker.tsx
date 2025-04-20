@@ -72,8 +72,8 @@ export default function ContactPicker({ onContactSelect, value, onChange, classN
   }
 
   return (
-    <div className="flex gap-2 w-full">
-      <div className="relative flex-1">
+    <div className="w-full space-y-2">
+      <div className="relative w-full">
         <Input
           type="tel"
           inputMode="numeric"
@@ -86,7 +86,26 @@ export default function ContactPicker({ onContactSelect, value, onChange, classN
       </div>
 
       {isContactPickerSupported && (
-        <Button type="button" variant="outline" onClick={handleOpenContactPicker} className="flex-shrink-0">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleOpenContactPicker}
+          className="md:hidden w-full flex items-center justify-center"
+          size="sm"
+        >
+          <Users className="h-4 w-4 mr-2" />
+          Contacts
+        </Button>
+      )}
+
+      {/* Desktop version - shown only on md screens and up */}
+      {isContactPickerSupported && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleOpenContactPicker}
+          className="hidden md:flex flex-shrink-0"
+        >
           <Users className="h-4 w-4 mr-2" />
           Contacts
         </Button>
