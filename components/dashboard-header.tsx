@@ -66,7 +66,7 @@ export function DashboardHeader() {
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/profile")}>
                 <User className="h-5 w-5" />
                 <span className="sr-only">User menu</span>
               </Button>

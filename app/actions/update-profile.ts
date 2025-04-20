@@ -26,44 +26,58 @@ export async function updateSenderProfile(formData: ProfileFormData) {
       return { success: false, error: "User ID not found" }
     }
 
+    console.log("Updating profile for user:", userId)
+    console.log("Form data:", formData)
+
     // Get Supabase client
     const supabase = getSupabaseServer()
 
     // Check if profile exists
-    const { data: existingProfile } = await supabase.from("sender_profiles").select("*").eq("user_id", userId).single()
+    const { data: existingProfile, error: fetchError } = await supabase
+      .from("sender_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .single()
+
+    if (fetchError && fetchError.code !== "PGRST116") {
+      // PGRST116 is "no rows returned" error
+      console.error("Error fetching profile:", fetchError)
+      return { success: false, error: fetchError.message }
+    }
+
+    // Prepare the profile data
+    const profileData = {
+      full_name: formData.fullName,
+      email: formData.email,
+      address: formData.address,
+      updated_at: new Date().toISOString(),
+    }
+
+    console.log("Profile data to save:", profileData)
+    console.log("Profile exists:", !!existingProfile)
+
+    let result
 
     if (existingProfile) {
       // Update existing profile
-      const { error } = await supabase
-        .from("sender_profiles")
-        .update({
-          full_name: formData.fullName,
-          email: formData.email,
-          address: formData.address,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", userId)
+      result = await supabase.from("sender_profiles").update(profileData).eq("user_id", userId)
 
-      if (error) {
-        console.error("Error updating profile:", error)
-        return { success: false, error: error.message }
-      }
+      console.log("Update result:", result)
     } else {
       // Create new profile
-      const { error } = await supabase.from("sender_profiles").insert({
+      result = await supabase.from("sender_profiles").insert({
+        ...profileData,
         user_id: userId,
         phone_number: phoneNumber,
-        full_name: formData.fullName,
-        email: formData.email,
-        address: formData.address,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       })
 
-      if (error) {
-        console.error("Error creating profile:", error)
-        return { success: false, error: error.message }
-      }
+      console.log("Insert result:", result)
+    }
+
+    if (result.error) {
+      console.error("Error updating profile:", result.error)
+      return { success: false, error: result.error.message }
     }
 
     // Revalidate the profile page to show updated data
@@ -100,7 +114,7 @@ export async function getSenderProfile() {
     // Get profile data
     const { data, error } = await supabase.from("sender_profiles").select("*").eq("user_id", userId).single()
 
-    if (error) {
+    if (error && error.code !== "PGRST116") {
       console.error("Error fetching profile:", error)
       return null
     }
