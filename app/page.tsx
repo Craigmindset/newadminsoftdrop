@@ -2,6 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
+import { SiteFooter } from "@/components/site-footer"
 
 export default function Home() {
   return (
@@ -144,6 +145,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <SiteFooter />
     </div>
   )
 }
