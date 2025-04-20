@@ -190,4 +190,3 @@ export function OtpVerification({ phoneNumber, onVerified }: OtpVerificationProp
     </div>
   )
 }
-

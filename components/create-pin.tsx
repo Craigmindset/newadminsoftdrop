@@ -204,4 +204,3 @@ export function CreatePin({ phoneNumber, onPinCreated }: CreatePinProps) {
     </form>
   )
 }
-

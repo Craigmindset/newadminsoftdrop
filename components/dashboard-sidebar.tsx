@@ -1,30 +1,21 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  BookOpen,
-  CreditCard,
-  Home,
-  LogOut,
-  Package,
-  Send,
-  Truck,
-  User,
-} from "lucide-react";
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { BookOpen, CreditCard, Home, LogOut, Package, Send, Truck, User } from "lucide-react"
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface DashboardSidebarProps {
-  onMenuItemClick?: () => void;
+  onMenuItemClick?: () => void
 }
 
 export function DashboardSidebar({ onMenuItemClick }: DashboardSidebarProps) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const pathname = usePathname()
+  const router = useRouter()
+  const isMobile = useMediaQuery("(max-width: 768px)")
 
   const routes = [
     {
@@ -49,12 +40,12 @@ export function DashboardSidebar({ onMenuItemClick }: DashboardSidebarProps) {
     },
     {
       name: "Carriers",
-      href: "#",
+      href: "/dashboard/carriers",
       icon: Truck,
     },
     {
       name: "Sender Academy",
-      href: "#",
+      href: "/sender-academy",
       icon: BookOpen,
     },
     {
@@ -67,19 +58,19 @@ export function DashboardSidebar({ onMenuItemClick }: DashboardSidebarProps) {
       href: "/",
       icon: LogOut,
     },
-  ];
+  ]
 
   const handleNavigation = (href: string) => {
     if (onMenuItemClick) {
-      onMenuItemClick();
+      onMenuItemClick()
     }
-    router.push(href);
-  };
+    router.push(href)
+  }
 
   return (
     <div className="flex h-[100dvh] w-full md:w-64 flex-col border-r bg-background">
-      <div className="flex flex-1 flex-col gap-6 p-8 md:p-6">
-        <nav className="grid gap-6 md:gap-4 my-4">
+      <div className="flex flex-1 flex-col gap-3 p-6 md:p-4">
+        <nav className="grid gap-4 md:gap-3 my-2">
           {routes.map((route) =>
             isMobile ? (
               <Button
@@ -87,7 +78,7 @@ export function DashboardSidebar({ onMenuItemClick }: DashboardSidebarProps) {
                 variant={pathname === route.href ? "secondary" : "ghost"}
                 className={cn(
                   "justify-start text-lg font-medium py-4 md:py-2 h-auto",
-                  pathname === route.href && "bg-secondary"
+                  pathname === route.href && "bg-secondary",
                 )}
                 onClick={() => handleNavigation(route.href)}
               >
@@ -100,7 +91,7 @@ export function DashboardSidebar({ onMenuItemClick }: DashboardSidebarProps) {
                 variant={pathname === route.href ? "secondary" : "ghost"}
                 className={cn(
                   "justify-start text-sm md:text-base py-2.5 md:py-3",
-                  pathname === route.href && "bg-secondary"
+                  pathname === route.href && "bg-secondary",
                 )}
                 asChild
               >
@@ -109,10 +100,10 @@ export function DashboardSidebar({ onMenuItemClick }: DashboardSidebarProps) {
                   {route.name}
                 </Link>
               </Button>
-            )
+            ),
           )}
         </nav>
       </div>
     </div>
-  );
+  )
 }

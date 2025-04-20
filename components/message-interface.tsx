@@ -177,4 +177,3 @@ export function MessageInterface({ open, onOpenChange, contact }: MessageInterfa
     </Dialog>
   )
 }
-

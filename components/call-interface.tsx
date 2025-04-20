@@ -144,4 +144,3 @@ export function CallInterface({ open, onOpenChange, contact }: CallInterfaceProp
     </Dialog>
   )
 }
-

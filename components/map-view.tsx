@@ -128,4 +128,3 @@ export function MapView({ pickupLocation, dropoffLocation, carrierLocation, isPi
     </div>
   )
 }
-

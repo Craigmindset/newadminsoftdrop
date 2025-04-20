@@ -131,4 +131,3 @@ export function CreatePassword({ onPasswordCreated, phoneNumber }: CreatePasswor
     </form>
   )
 }
-

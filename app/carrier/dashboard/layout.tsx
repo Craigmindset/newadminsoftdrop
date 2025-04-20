@@ -18,4 +18,3 @@ export default function CarrierDashboardLayout({ children }: { children: ReactNo
     </div>
   )
 }
-

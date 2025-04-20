@@ -2,9 +2,8 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { LoadScript, Autocomplete } from "@react-google-maps/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -245,51 +244,29 @@ export default function SendItemPage() {
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Pickup & Delivery Locations</h3>
 
-              <LoadScript googleMapsApiKey="AIzaSyD72etivyT_7MQfVKR44l_R01R6J7xAB-Q" libraries={["places"]}>
-                <div>
-                  <Label htmlFor="pickup-location">Pickup Location</Label>
-                  <Autocomplete
-                    onLoad={(autocomplete) => {
-                      autocomplete.setFields(["formatted_address", "geometry"])
-                    }}
-                    onPlaceChanged={() => {
-                      const input = document.getElementById("pickup-location") as HTMLInputElement
-                      setPickupLocation(input.value)
-                    }}
-                  >
-                    <Input
-                      id="pickup-location"
-                      placeholder="Enter detailed pickup address"
-                      className="mt-1"
-                      value={pickupLocation}
-                      onChange={(e) => setPickupLocation(e.target.value)}
-                      required
-                    />
-                  </Autocomplete>
-                </div>
+              <div>
+                <Label htmlFor="pickup-location">Pickup Location</Label>
+                <Textarea
+                  id="pickup-location"
+                  placeholder="Enter detailed pickup address"
+                  className="mt-1"
+                  value={pickupLocation}
+                  onChange={(e) => setPickupLocation(e.target.value)}
+                  required
+                />
+              </div>
 
-                <div className="mt-4">
-                  <Label htmlFor="drop-location">Drop Location</Label>
-                  <Autocomplete
-                    onLoad={(autocomplete) => {
-                      autocomplete.setFields(["formatted_address", "geometry"])
-                    }}
-                    onPlaceChanged={() => {
-                      const input = document.getElementById("drop-location") as HTMLInputElement
-                      setDropLocation(input.value)
-                    }}
-                  >
-                    <Input
-                      id="drop-location"
-                      placeholder="Enter detailed delivery address"
-                      className="mt-1"
-                      value={dropLocation}
-                      onChange={(e) => setDropLocation(e.target.value)}
-                      required
-                    />
-                  </Autocomplete>
-                </div>
-              </LoadScript>
+              <div>
+                <Label htmlFor="drop-location">Drop Location</Label>
+                <Textarea
+                  id="drop-location"
+                  placeholder="Enter detailed delivery address"
+                  className="mt-1"
+                  value={dropLocation}
+                  onChange={(e) => setDropLocation(e.target.value)}
+                  required
+                />
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -371,4 +348,3 @@ export default function SendItemPage() {
     </div>
   )
 }
-

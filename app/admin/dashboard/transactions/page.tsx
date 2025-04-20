@@ -271,7 +271,7 @@ export default function TransactionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₦{metrics.totalCommission.toLocaleString()}</div>
-            <p className="text-xs text-gray-500">15% of transaction volume</p>
+            <p className="text-xs text-gray-500">5% of transaction volume</p>
           </CardContent>
         </Card>
 
@@ -527,7 +527,7 @@ export default function TransactionsPage() {
 
               <div className="p-4 bg-gray-50 rounded-lg">
                 <h3 className="text-sm font-medium mb-1">Commission Rate</h3>
-                <div className="text-2xl font-bold">15%</div>
+                <div className="text-2xl font-bold">5%</div>
                 <p className="text-sm text-gray-500 mt-1">Of total transaction value</p>
               </div>
             </div>
@@ -537,4 +537,3 @@ export default function TransactionsPage() {
     </div>
   )
 }
-
