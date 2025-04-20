@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 
 type ToastProps = {
   id: string
@@ -21,21 +21,68 @@ interface UseToastReturn {
   toasts: Toasts
 }
 
+// Create a singleton to store toast state across the app
+const TOAST_STORE: {
+  toasts: Toasts
+  listeners: Set<(toasts: Toasts) => void>
+  subscribe: (listener: (toasts: Toasts) => void) => () => void
+  addToast: (props: Omit<ToastProps, "id">) => string
+  dismissToast: (id: string) => void
+  dismissAllToasts: () => void
+} = {
+  toasts: [],
+  listeners: new Set(),
+
+  subscribe(listener) {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  },
+
+  addToast(props) {
+    const id = Math.random().toString(36).substring(2, 9)
+    this.toasts = [...this.toasts, { id, ...props }]
+    this.listeners.forEach((listener) => listener(this.toasts))
+    return id
+  },
+
+  dismissToast(id) {
+    this.toasts = this.toasts.filter((toast) => toast.id !== id)
+    this.listeners.forEach((listener) => listener(this.toasts))
+  },
+
+  dismissAllToasts() {
+    this.toasts = []
+    this.listeners.forEach((listener) => listener(this.toasts))
+  },
+}
+
+// Export the direct toast function
+export const toast = (props: Omit<ToastProps, "id">) => {
+  return TOAST_STORE.addToast(props)
+}
+
+// Export the hook for component usage
 export function useToast(): UseToastReturn {
-  const [toasts, setToasts] = useState<Toasts>([])
+  const [toasts, setToasts] = useState<Toasts>(TOAST_STORE.toasts)
+
+  // Subscribe to toast store changes
+  useEffect(() => {
+    const unsubscribe = TOAST_STORE.subscribe(setToasts)
+    return unsubscribe
+  }, [])
 
   const toast = useCallback((props: Omit<ToastProps, "id">) => {
-    const id = Math.random().toString(36).substring(2, 9)
-    setToasts((t: Toasts) => [...t, { id, ...props }])
-    return id
+    return TOAST_STORE.addToast(props)
   }, [])
 
   const dismiss = useCallback((id: string) => {
-    setToasts((t: Toasts) => t.filter((toast) => toast.id !== id))
+    TOAST_STORE.dismissToast(id)
   }, [])
 
   const dismissAll = useCallback(() => {
-    setToasts([])
+    TOAST_STORE.dismissAllToasts()
   }, [])
 
   return {

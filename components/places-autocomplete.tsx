@@ -2,13 +2,16 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
-import { Loader2 } from "lucide-react"
+import { Loader2, MapPin } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/use-toast"
 
 interface PlacesAutocompleteProps {
   onPlaceSelect: (place: google.maps.places.PlaceResult) => void
   placeholder: string
   className?: string
   defaultValue?: string
+  showCurrentLocation?: boolean
 }
 
 declare global {
@@ -22,11 +25,13 @@ export default function PlacesAutocomplete({
   placeholder,
   className,
   defaultValue = "",
+  showCurrentLocation = false,
 }: PlacesAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [value, setValue] = useState(defaultValue)
   const [loading, setLoading] = useState(false)
   const [scriptLoaded, setScriptLoaded] = useState(false)
+  const [gettingCurrentLocation, setGettingCurrentLocation] = useState(false)
 
   // Load the Google Maps script
   useEffect(() => {
@@ -77,22 +82,124 @@ export default function PlacesAutocomplete({
     }
   }, [scriptLoaded, onPlaceSelect])
 
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: "Error",
+        description: "Geolocation is not supported by your browser",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setGettingCurrentLocation(true)
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          if (!window.google?.maps) {
+            throw new Error("Google Maps not loaded")
+          }
+
+          const { latitude, longitude } = position.coords
+          const geocoder = new window.google.maps.Geocoder()
+
+          geocoder.geocode(
+            { location: { lat: latitude, lng: longitude } },
+            (results: google.maps.GeocoderResult[], status: google.maps.GeocoderStatus) => {
+              setGettingCurrentLocation(false)
+
+              if (status === "OK" && results[0]) {
+                const place = {
+                  formatted_address: results[0].formatted_address,
+                  geometry: {
+                    location: {
+                      lat: () => latitude,
+                      lng: () => longitude,
+                    },
+                  },
+                } as google.maps.places.PlaceResult
+
+                setValue(results[0].formatted_address)
+                onPlaceSelect(place)
+              } else {
+                toast({
+                  title: "Error",
+                  description: "Couldn't find address for your location",
+                  variant: "destructive",
+                })
+              }
+            },
+          )
+        } catch (error) {
+          setGettingCurrentLocation(false)
+          toast({
+            title: "Error",
+            description: "Failed to get your current location",
+            variant: "destructive",
+          })
+        }
+      },
+      (error) => {
+        setGettingCurrentLocation(false)
+        let errorMessage = "Failed to get your location"
+
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Location permission denied"
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information unavailable"
+            break
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out"
+            break
+        }
+
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    )
+  }
+
   return (
     <div className="relative">
-      <Input
-        ref={inputRef}
-        type="text"
-        placeholder={placeholder}
-        className={className}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        disabled={loading}
-      />
-      {loading && (
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Input
+            ref={inputRef}
+            type="text"
+            placeholder={placeholder}
+            className={className}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            disabled={loading || gettingCurrentLocation}
+          />
+          {loading && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          )}
         </div>
-      )}
+
+        {showCurrentLocation && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={getCurrentLocation}
+            disabled={loading || gettingCurrentLocation}
+            title="Use current location"
+            className="flex-shrink-0"
+          >
+            {gettingCurrentLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
