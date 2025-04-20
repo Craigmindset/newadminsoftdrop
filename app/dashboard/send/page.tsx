@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Camera, Upload, AlertCircle } from "lucide-react"
+import { Camera, Upload, AlertCircle, MapPin } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -23,10 +23,19 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import PlacesAutocomplete from "@/components/places-autocomplete"
 import { Toaster } from "@/components/ui/toaster"
+import MapEmbed from "@/components/map-embed"
 
-declare global {
-  interface Window {
-    google: any
+interface Coordinates {
+  lat: number
+  lng: number
+}
+
+interface PlaceResult {
+  formatted_address: string
+  name?: string
+  place_id?: string
+  geometry: {
+    location: Coordinates
   }
 }
 
@@ -41,12 +50,15 @@ export default function SendItemPage() {
   const [deliveryPin, setDeliveryPin] = useState("")
   const [pickupLocation, setPickupLocation] = useState("")
   const [dropLocation, setDropLocation] = useState("")
-  const [pickupCoordinates, setPickupCoordinates] = useState<{ lat: number; lng: number } | null>(null)
-  const [dropCoordinates, setDropCoordinates] = useState<{ lat: number; lng: number } | null>(null)
+  const [pickupCoordinates, setPickupCoordinates] = useState<Coordinates | null>(null)
+  const [dropCoordinates, setDropCoordinates] = useState<Coordinates | null>(null)
   const [itemImage, setItemImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [deliveryMode, setDeliveryMode] = useState<"door" | "arrival" | "">("")
   const [showDoorDeliveryDialog, setShowDoorDeliveryDialog] = useState(false)
+  const [showMapDialog, setShowMapDialog] = useState(false)
+  const [mapCoordinates, setMapCoordinates] = useState<Coordinates | null>(null)
+  const [mapType, setMapType] = useState<"pickup" | "drop">("pickup")
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -78,34 +90,41 @@ export default function SendItemPage() {
     // Here you would typically update pricing or add fees
   }
 
-  const handlePickupPlaceSelect = (place: google.maps.places.PlaceResult) => {
-    if (place.formatted_address) {
-      setPickupLocation(place.formatted_address)
-    }
-    if (place.geometry?.location) {
-      setPickupCoordinates({
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng(),
-      })
-    }
+  const handlePickupPlaceSelect = (place: PlaceResult, coordinates: Coordinates) => {
+    setPickupLocation(place.formatted_address)
+    setPickupCoordinates(coordinates)
   }
 
-  const handleDropPlaceSelect = (place: google.maps.places.PlaceResult) => {
-    if (place.formatted_address) {
-      setDropLocation(place.formatted_address)
-    }
-    if (place.geometry?.location) {
-      setDropCoordinates({
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng(),
-      })
+  const handleDropPlaceSelect = (place: PlaceResult, coordinates: Coordinates) => {
+    setDropLocation(place.formatted_address)
+    setDropCoordinates(coordinates)
+  }
+
+  const handleViewOnMap = (type: "pickup" | "drop") => {
+    const coordinates = type === "pickup" ? pickupCoordinates : dropCoordinates
+    if (coordinates) {
+      setMapCoordinates(coordinates)
+      setMapType(type)
+      setShowMapDialog(true)
     }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Validate that we have coordinates for both pickup and drop locations
+    if (!pickupCoordinates) {
+      alert("Please select a valid pickup location")
+      return
+    }
+
+    if (!dropCoordinates) {
+      alert("Please select a valid drop location")
+      return
+    }
+
     // In a real app, you would validate and process the form data
-    // You can now include the coordinates in your submission
+    // The coordinates are stored in pickupCoordinates and dropCoordinates
     console.log("Pickup coordinates:", pickupCoordinates)
     console.log("Drop coordinates:", dropCoordinates)
     router.push("/dashboard/send/carriers")
@@ -290,9 +309,20 @@ export default function SendItemPage() {
                     showCurrentLocation={true}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Click the location pin to use your current location
-                </p>
+                {pickupCoordinates && (
+                  <div className="flex justify-end mt-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                      onClick={() => handleViewOnMap("pickup")}
+                    >
+                      <MapPin className="h-3 w-3" />
+                      View on map
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -304,6 +334,20 @@ export default function SendItemPage() {
                     defaultValue={dropLocation}
                   />
                 </div>
+                {dropCoordinates && (
+                  <div className="flex justify-end mt-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                      onClick={() => handleViewOnMap("drop")}
+                    >
+                      <MapPin className="h-3 w-3" />
+                      View on map
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -380,6 +424,24 @@ export default function SendItemPage() {
 
           <DialogFooter>
             <Button onClick={handleConfirmDoorDelivery}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Map Dialog */}
+      <Dialog open={showMapDialog} onOpenChange={setShowMapDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{mapType === "pickup" ? "Pickup" : "Drop"} Location</DialogTitle>
+            <DialogDescription>{mapType === "pickup" ? pickupLocation : dropLocation}</DialogDescription>
+          </DialogHeader>
+
+          <div className="h-[300px] w-full rounded-md overflow-hidden border">
+            {mapCoordinates && <MapEmbed lat={mapCoordinates.lat} lng={mapCoordinates.lng} zoom={17} />}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowMapDialog(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
