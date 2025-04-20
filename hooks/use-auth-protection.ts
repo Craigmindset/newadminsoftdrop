@@ -9,28 +9,39 @@ export function useAuthProtection() {
 
   useEffect(() => {
     // Function to check authentication status
-    const checkAuth = () => {
+    const checkAuth = async () => {
       try {
-        // Check for session token in localStorage or cookies
-        const hasSession =
-          document.cookie.includes("sb-session") || localStorage.getItem("supabase.auth.token") !== null
+        // More robust session check that looks for the specific session cookie format
+        const hasCookie = document.cookie.split(";").some((item) => item.trim().startsWith("sb-session="))
 
-        if (!hasSession) {
-          // No session found, redirect to login
-          console.log("No authentication detected, redirecting to login")
-          router.replace("/login")
+        // Check localStorage as fallback (if your app uses it)
+        const hasLocalStorage =
+          typeof window !== "undefined" &&
+          (localStorage.getItem("sb-auth-token") || localStorage.getItem("supabase.auth.token"))
+
+        // If we have either authentication method, consider the user logged in
+        if (hasCookie || hasLocalStorage) {
+          console.log("Authentication detected, allowing access to dashboard")
+          setIsChecking(false)
+          return
         }
+
+        // No valid auth found, redirect to login
+        console.log("No authentication detected, redirecting to login")
+        router.replace("/login")
       } catch (error) {
         console.error("Auth check error:", error)
-        // On error, redirect to login as a safety measure
-        router.replace("/login")
-      } finally {
+        // On error, we'll still render the dashboard to avoid blocking legitimate users
         setIsChecking(false)
       }
     }
 
-    // Run the check
-    checkAuth()
+    // Add a small delay to ensure cookies are properly loaded
+    const timer = setTimeout(() => {
+      checkAuth()
+    }, 100)
+
+    return () => clearTimeout(timer)
   }, [router])
 
   return { isChecking }

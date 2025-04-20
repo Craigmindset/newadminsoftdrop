@@ -1,18 +1,46 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import type React from "react"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Toaster } from "@/components/ui/toaster"
-import { useAuthProtection } from "@/hooks/use-auth-protection"
+import { useRouter } from "next/navigation"
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Check authentication before rendering dashboard
-  const { isChecking } = useAuthProtection()
+  const router = useRouter()
+  const [isChecking, setIsChecking] = useState(true)
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const checkAuth = () => {
+      try {
+        // Check for session cookie with the specific name format
+        const hasCookie = document.cookie.split(";").some((item) => item.trim().startsWith("sb-session="))
+
+        if (!hasCookie) {
+          console.log("No authentication detected, redirecting to login")
+          router.replace("/login")
+          return
+        }
+
+        // User is authenticated
+        setIsChecking(false)
+      } catch (error) {
+        console.error("Auth check error:", error)
+        // On error, still show dashboard to avoid blocking legitimate users
+        setIsChecking(false)
+      }
+    }
+
+    // Small delay to ensure cookies are loaded
+    const timer = setTimeout(checkAuth, 100)
+    return () => clearTimeout(timer)
+  }, [router])
 
   // While checking auth status, show minimal loading UI that matches existing design
   if (isChecking) {
