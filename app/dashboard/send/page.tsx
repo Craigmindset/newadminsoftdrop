@@ -262,12 +262,13 @@ export default function SendItemPage() {
                 </div>
                 <div>
                   <Label htmlFor="receiver-phone">Receiver Phone</Label>
-                  <ContactPicker
-                    value={receiverPhone}
-                    onChange={setReceiverPhone}
-                    onContactSelect={handleContactSelect}
-                    className="mt-1"
-                  />
+                  <div className="mt-1 flex flex-col md:flex-row md:items-center md:gap-2">
+                    <ContactPicker
+                      value={receiverPhone}
+                      onChange={setReceiverPhone}
+                      onContactSelect={handleContactSelect}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -295,7 +296,7 @@ export default function SendItemPage() {
 
               <div className="space-y-1">
                 <Label htmlFor="pickup-location">Pickup Location</Label>
-                <div className="mt-1 w-full">
+                <div className="mt-1 flex flex-col md:flex-row md:items-center md:gap-2">
                   <PlacesAutocomplete
                     placeholder="Search for pickup address"
                     onPlaceSelect={handlePickupPlaceSelect}
@@ -321,7 +322,7 @@ export default function SendItemPage() {
 
               <div className="space-y-1">
                 <Label htmlFor="drop-location">Drop Location</Label>
-                <div className="mt-1 w-full">
+                <div className="mt-1 flex flex-col md:flex-row md:items-center md:gap-2">
                   <PlacesAutocomplete
                     placeholder="Search for delivery address"
                     onPlaceSelect={handleDropPlaceSelect}

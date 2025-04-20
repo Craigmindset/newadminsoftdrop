@@ -249,49 +249,67 @@ export default function PlacesAutocomplete({
   }
 
   return (
-    <div className="relative w-full">
-      <div className="flex gap-2 w-full">
-        <div className="relative flex-1 w-full">
-          <Input
-            ref={inputRef}
-            type="text"
-            placeholder={placeholder}
-            className={`${className} pr-10 w-full`}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onFocus={() => {
-              if (debouncedValue && debouncedValue.length >= 3) {
-                setShowSuggestions(true)
-              }
-            }}
+    <div className="relative w-full space-y-2">
+      <div className="relative w-full">
+        <Input
+          ref={inputRef}
+          type="text"
+          placeholder={placeholder}
+          className={`${className} pr-10 w-full`}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onFocus={() => {
+            if (debouncedValue && debouncedValue.length >= 3) {
+              setShowSuggestions(true)
+            }
+          }}
+          disabled={gettingCurrentLocation}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
+        />
+        {loading && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {/* Suggestions dropdown */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-60 overflow-auto">
+            {suggestions.map((suggestion, index) => (
+              <div
+                key={suggestion.place_id || index}
+                className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                onClick={() => handleSelectSuggestion(suggestion)}
+              >
+                {suggestion.formatted_address}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showCurrentLocation && (
+        <div className="w-full">
+          {/* Mobile version - shown only on small screens */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={getCurrentLocation}
             disabled={gettingCurrentLocation}
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck="false"
-          />
-          {loading && (
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          )}
+            className="md:hidden w-full flex items-center justify-center"
+          >
+            {gettingCurrentLocation ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <MapPin className="h-4 w-4 mr-2" />
+            )}
+            Use current location
+          </Button>
 
-          {/* Suggestions dropdown */}
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-60 overflow-auto">
-              {suggestions.map((suggestion, index) => (
-                <div
-                  key={suggestion.place_id || index}
-                  className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
-                  onClick={() => handleSelectSuggestion(suggestion)}
-                >
-                  {suggestion.formatted_address}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {showCurrentLocation && (
+          {/* Desktop version - shown only on md screens and up */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -301,7 +319,7 @@ export default function PlacesAutocomplete({
                   size="icon"
                   onClick={getCurrentLocation}
                   disabled={gettingCurrentLocation}
-                  className="flex-shrink-0 h-10 w-10"
+                  className="hidden md:flex flex-shrink-0 h-10 w-10"
                 >
                   {gettingCurrentLocation ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -315,8 +333,8 @@ export default function PlacesAutocomplete({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
