@@ -8,7 +8,6 @@ export type ProfileFormData = {
   fullName?: string
   email?: string
   address?: string
-  profileImage?: File
 }
 
 export async function updateSenderProfile(formData: FormData) {
@@ -27,22 +26,12 @@ export async function updateSenderProfile(formData: FormData) {
       return { success: false, error: "User ID not found" }
     }
 
-    console.log("Updating profile for user:", userId)
-
     // Extract form data
     const fullName = formData.get("fullName") as string
     const email = formData.get("email") as string
     const address = formData.get("address") as string
     const profileImage = formData.get("profileImage") as File | null
     const removeProfileImage = formData.get("removeProfileImage") === "true"
-
-    console.log("Form data extracted:", {
-      fullName,
-      email,
-      address,
-      hasProfileImage: !!profileImage,
-      removeProfileImage,
-    })
 
     // Get Supabase client
     const supabase = getSupabaseServer()
@@ -64,40 +53,67 @@ export async function updateSenderProfile(formData: FormData) {
     let profile_image_url = existingProfile?.profile_image_url || null
 
     if (profileImage) {
-      // Generate a unique filename
-      const fileExt = profileImage.name.split(".").pop()
-      const fileName = `${userId}-${Date.now()}.${fileExt}`
-      const filePath = `profile-images/${fileName}`
+      try {
+        // First, check if the storage bucket exists, if not create it
+        const { data: buckets } = await supabase.storage.listBuckets()
+        const profileBucket = buckets?.find((bucket) => bucket.name === "profile-images")
 
-      // Upload the image to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("profiles")
-        .upload(filePath, profileImage, {
-          cacheControl: "3600",
-          upsert: true,
-        })
+        if (!profileBucket) {
+          // Create the bucket if it doesn't exist
+          const { error: bucketError } = await supabase.storage.createBucket("profile-images", {
+            public: true,
+            fileSizeLimit: 5242880, // 5MB in bytes
+          })
 
-      if (uploadError) {
-        console.error("Error uploading profile image:", uploadError)
-        return { success: false, error: uploadError.message }
+          if (bucketError) {
+            console.error("Error creating storage bucket:", bucketError)
+            return { success: false, error: "Failed to create storage for profile images" }
+          }
+        }
+
+        // Generate a unique filename
+        const fileExt = profileImage.name.split(".").pop()
+        const fileName = `${userId}-${Date.now()}.${fileExt}`
+        const filePath = fileName
+
+        // If there was a previous image, delete it from storage
+        if (existingProfile?.profile_image_url) {
+          const oldFilePath = existingProfile.profile_image_url.split("/").pop()
+          if (oldFilePath) {
+            await supabase.storage.from("profile-images").remove([oldFilePath])
+          }
+        }
+
+        // Upload the image to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("profile-images")
+          .upload(filePath, profileImage, {
+            cacheControl: "3600",
+            upsert: true,
+          })
+
+        if (uploadError) {
+          console.error("Error uploading profile image:", uploadError)
+          return { success: false, error: "Failed to upload profile image. Please try again." }
+        }
+
+        // Get the public URL for the uploaded image
+        const { data: urlData } = supabase.storage.from("profile-images").getPublicUrl(filePath)
+
+        profile_image_url = urlData.publicUrl
+      } catch (uploadError) {
+        console.error("Error handling profile image:", uploadError)
+        return { success: false, error: "Failed to process profile image. Please try again." }
       }
-
-      // Get the public URL for the uploaded image
-      const { data: urlData } = supabase.storage.from("profiles").getPublicUrl(filePath)
-
-      profile_image_url = urlData.publicUrl
-      console.log("Uploaded profile image:", profile_image_url)
     } else if (removeProfileImage) {
       // If the user wants to remove their profile image
-      profile_image_url = null
-
-      // If there was a previous image, delete it from storage
       if (existingProfile?.profile_image_url) {
         const oldFilePath = existingProfile.profile_image_url.split("/").pop()
         if (oldFilePath) {
-          await supabase.storage.from("profiles").remove([`profile-images/${oldFilePath}`])
+          await supabase.storage.from("profile-images").remove([oldFilePath])
         }
       }
+      profile_image_url = null
     }
 
     // Prepare the profile data
@@ -109,15 +125,11 @@ export async function updateSenderProfile(formData: FormData) {
       updated_at: new Date().toISOString(),
     }
 
-    console.log("Profile data to save:", profileData)
-    console.log("Profile exists:", !!existingProfile)
-
     let result
 
     if (existingProfile) {
       // Update existing profile
       result = await supabase.from("sender_profiles").update(profileData).eq("user_id", userId)
-      console.log("Update result:", result)
     } else {
       // Create new profile
       result = await supabase.from("sender_profiles").insert({
@@ -126,7 +138,6 @@ export async function updateSenderProfile(formData: FormData) {
         phone_number: phoneNumber,
         created_at: new Date().toISOString(),
       })
-      console.log("Insert result:", result)
     }
 
     if (result.error) {

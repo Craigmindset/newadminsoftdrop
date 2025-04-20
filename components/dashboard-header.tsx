@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Bell, LogOut, Menu, User } from "lucide-react"
+import { Bell, LogOut, Menu } from "lucide-react"
 import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
@@ -16,12 +16,43 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { logoutSender } from "@/app/actions/sender-auth"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function DashboardHeader() {
   const router = useRouter()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [profileData, setProfileData] = useState<{
+    name?: string
+    imageUrl?: string
+  }>({})
+
+  useEffect(() => {
+    // Fetch profile data when component mounts
+    const fetchProfileData = async () => {
+      try {
+        const response = await fetch("/api/profile", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setProfileData({
+            name: data.full_name,
+            imageUrl: data.profile_image_url,
+          })
+        }
+      } catch (error) {
+        console.error("Failed to fetch profile data:", error)
+      }
+    }
+
+    fetchProfileData()
+  }, [])
 
   const closeSheet = () => {
     setIsSheetOpen(false)
@@ -29,6 +60,17 @@ export function DashboardHeader() {
 
   const handleLogout = async () => {
     await logoutSender()
+  }
+
+  // Get initials for avatar fallback
+  const getInitials = () => {
+    if (!profileData.name) return "U"
+    return profileData.name
+      .split(" ")
+      .map((name) => name[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2)
   }
 
   return (
@@ -66,9 +108,11 @@ export function DashboardHeader() {
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/profile")}>
-                <User className="h-5 w-5" />
-                <span className="sr-only">User menu</span>
+              <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 p-0">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profileData.imageUrl || ""} alt={profileData.name || "User"} />
+                  <AvatarFallback>{getInitials()}</AvatarFallback>
+                </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

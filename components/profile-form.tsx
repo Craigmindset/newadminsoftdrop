@@ -39,6 +39,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [profileImage, setProfileImage] = useState<File | null>(null)
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(initialData?.profile_image_url || null)
+  const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState<ProfileFormData>({
@@ -47,7 +48,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     address: initialData?.address || "",
   })
 
-  // Update form data if initialData changes (e.g., after a successful fetch)
+  // Update form data if initialData changes
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -77,6 +78,27 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Image must be less than 5MB",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select an image file",
+          variant: "destructive",
+        })
+        return
+      }
+
       setProfileImage(file)
       setProfileImagePreview(URL.createObjectURL(file))
 
@@ -120,15 +142,14 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       submitData.append("address", formData.address || "")
 
       if (profileImage) {
+        setIsUploading(true)
         submitData.append("profileImage", profileImage)
       } else if (profileImagePreview === null && initialData?.profile_image_url) {
         // If the user removed the image
         submitData.append("removeProfileImage", "true")
       }
 
-      console.log("Submitting form data:", Object.fromEntries(submitData.entries()))
       const result = await updateSenderProfile(submitData)
-      console.log("Update result:", result)
 
       if (result.success) {
         setSuccess(true)
@@ -143,7 +164,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         setError(result.error || "Failed to update profile. Please try again.")
         toast({
           title: "Update Failed",
-          description: "Please submit again.",
+          description: result.error || "Please try again.",
           variant: "destructive",
         })
       }
@@ -152,11 +173,12 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       setError("An unexpected error occurred. Please try again.")
       toast({
         title: "Error",
-        description: "Please submit again.",
+        description: "Please try again.",
         variant: "destructive",
       })
     } finally {
       setIsSubmitting(false)
+      setIsUploading(false)
     }
   }
 
@@ -209,15 +231,23 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
               <Label htmlFor="profileImage">Profile Picture</Label>
               <div className="relative cursor-pointer group" onClick={handleImageClick}>
                 <Avatar className="h-24 w-24 border-2 border-muted">
-                  <AvatarImage src={profileImagePreview || ""} />
-                  <AvatarFallback className="text-2xl">{getInitials()}</AvatarFallback>
+                  {isUploading ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
+                      <Loader2 className="h-8 w-8 animate-spin text-white" />
+                    </div>
+                  ) : (
+                    <>
+                      <AvatarImage src={profileImagePreview || ""} alt="Profile" />
+                      <AvatarFallback className="text-2xl">{getInitials()}</AvatarFallback>
+                    </>
+                  )}
                 </Avatar>
 
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                   <Camera className="h-8 w-8 text-white" />
                 </div>
 
-                {profileImagePreview && (
+                {profileImagePreview && !isUploading && (
                   <Button
                     type="button"
                     variant="destructive"
@@ -236,8 +266,13 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
                 accept="image/*"
                 className="hidden"
                 onChange={handleImageChange}
+                disabled={isUploading}
               />
-              <p className="text-xs text-muted-foreground">Click to upload or change your profile picture</p>
+              <p className="text-xs text-muted-foreground text-center">
+                Click to upload or change your profile picture
+                <br />
+                (Max size: 5MB)
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -289,7 +324,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
+                  {isUploading ? "Uploading..." : "Updating..."}
                 </>
               ) : success ? (
                 <>
