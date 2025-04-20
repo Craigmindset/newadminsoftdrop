@@ -4,27 +4,6 @@ import { cookies } from "next/headers"
 import { getSupabaseServer } from "@/lib/supabase-server"
 import { redirect } from "next/navigation"
 
-/**
- * Format phone number to international format for authentication
- */
-function formatPhoneNumber(phone: string): string {
-  // Remove any non-digit characters
-  let cleanPhone = phone.replace(/\D/g, "")
-
-  // Ensure it starts with country code (234 for Nigeria)
-  if (cleanPhone.startsWith("0")) {
-    cleanPhone = "234" + cleanPhone.substring(1)
-  } else if (!cleanPhone.startsWith("234")) {
-    cleanPhone = "234" + cleanPhone
-  }
-
-  // Add the plus sign for international format
-  return "+" + cleanPhone
-}
-
-/**
- * Authenticate a sender with phone number and PIN
- */
 export async function authenticateSender(phoneNumber: string, pin: string) {
   try {
     const supabase = getSupabaseServer()
@@ -50,7 +29,7 @@ export async function authenticateSender(phoneNumber: string, pin: string) {
       return { success: false, error: "Authentication failed" }
     }
 
-    // Set session cookie
+    // Set session cookie with updated settings for production compatibility
     cookies().set(
       "sb-session",
       JSON.stringify({
@@ -64,10 +43,17 @@ export async function authenticateSender(phoneNumber: string, pin: string) {
         secure: process.env.NODE_ENV === "production",
         maxAge: 60 * 60 * 24 * 7, // 1 week
         path: "/",
+        // Removed domain specification to use current domain automatically
+        sameSite: "lax", // Added for better security and cookie handling
       },
     )
 
-    return { success: true, userId: data.user.id }
+    return {
+      success: true,
+      userId: data.user.id,
+      // Add redirect URL for hard navigation
+      redirectUrl: "/dashboard",
+    }
   } catch (error) {
     console.error("Authentication error:", error)
     return {
