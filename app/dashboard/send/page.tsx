@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import PlacesAutocomplete from "@/components/places-autocomplete"
+import { Toaster } from "@/components/ui/toaster"
 
 declare global {
   interface Window {
@@ -286,6 +287,7 @@ export default function SendItemPage() {
                   onPlaceSelect={handlePickupPlaceSelect}
                   className="mt-1"
                   defaultValue={pickupLocation}
+                  showCurrentLocation={true}
                 />
               </div>
 
@@ -376,6 +378,8 @@ export default function SendItemPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Toaster />
     </div>
   )
 }
