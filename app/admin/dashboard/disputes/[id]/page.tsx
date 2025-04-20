@@ -152,7 +152,7 @@ const mockDispute = {
   lastUpdated: "2023-09-16T11:45:00",
 }
 
-export default function DisputeDetailPage({ params }: { params: { id: string } }) {
+export default function DisputeDetailPage({ params }: { params: { id: string } } & Record<string, any>) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("overview")
   const [resolution, setResolution] = useState<string>("")
@@ -351,7 +351,7 @@ export default function DisputeDetailPage({ params }: { params: { id: string } }
                         <AvatarImage
                           src={
                             dispute.sender.avatar ||
-                            `/placeholder.svg?height=40&width=40&text=${dispute.sender.name.charAt(0)}`
+                            `/placeholder.svg?height=40&width=40&text=${dispute.sender.name.charAt(0) || "/placeholder.svg"}`
                           }
                         />
                         <AvatarFallback>{dispute.sender.name.charAt(0)}</AvatarFallback>
@@ -367,7 +367,7 @@ export default function DisputeDetailPage({ params }: { params: { id: string } }
                         <AvatarImage
                           src={
                             dispute.carrier.avatar ||
-                            `/placeholder.svg?height=40&width=40&text=${dispute.carrier.name.charAt(0)}`
+                            `/placeholder.svg?height=40&width=40&text=${dispute.carrier.name.charAt(0) || "/placeholder.svg"}`
                           }
                         />
                         <AvatarFallback>{dispute.carrier.name.charAt(0)}</AvatarFallback>
@@ -383,7 +383,7 @@ export default function DisputeDetailPage({ params }: { params: { id: string } }
                         <AvatarImage
                           src={
                             dispute.receiver.avatar ||
-                            `/placeholder.svg?height=40&width=40&text=${dispute.receiver.name.charAt(0)}`
+                            `/placeholder.svg?height=40&width=40&text=${dispute.receiver.name.charAt(0) || "/placeholder.svg"}`
                           }
                         />
                         <AvatarFallback>{dispute.receiver.name.charAt(0)}</AvatarFallback>
@@ -768,4 +768,3 @@ export default function DisputeDetailPage({ params }: { params: { id: string } }
     </div>
   )
 }
-

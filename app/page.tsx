@@ -1,8 +1,7 @@
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { SiteFooter } from "@/components/site-footer";
-import { ArrowRight } from "lucide-react";
+import Image from "next/image"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { ArrowRight } from "lucide-react"
 
 export default function Home() {
   return (
@@ -22,22 +21,13 @@ export default function Home() {
               <span className="text-xl font-bold">SoftDrop</span>
             </div>
             <div className="hidden md:flex items-center gap-8">
-              <Link
-                href="#"
-                className="text-sm font-medium hover:text-gray-300"
-              >
+              <Link href="#" className="text-sm font-medium hover:text-gray-300">
                 Sender Academy
               </Link>
-              <Link
-                href="#"
-                className="text-sm font-medium hover:text-gray-300"
-              >
+              <Link href="#" className="text-sm font-medium hover:text-gray-300">
                 Why SoftDrop
               </Link>
-              <Link
-                href="#"
-                className="text-sm font-medium hover:text-gray-300"
-              >
+              <Link href="#" className="text-sm font-medium hover:text-gray-300">
                 FAQ
               </Link>
             </div>
@@ -50,7 +40,7 @@ export default function Home() {
                 Login
               </Link>
               <Link
-                href="/signup/sender"
+                href="/signup"
                 className="px-4 py-2 text-sm font-medium bg-white text-black hover:bg-gray-100 rounded-full transition-colors"
               >
                 Signup
@@ -71,9 +61,9 @@ export default function Home() {
             </p>
 
             <div className="w-full max-w-md flex flex-col sm:flex-row gap-4">
-              <Link href="/signup/sender" className="flex-1">
+              <Link href="/signup" className="flex-1">
                 <Button className="w-full py-6 bg-green-600 hover:bg-green-700 text-white rounded-xl">
-                  Get Started as Sender <ArrowRight className="ml-2 h-5 w-5" />
+                  Get Started <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
               <Link href="https://softdrop.tech" className="flex-1">
@@ -96,7 +86,7 @@ export default function Home() {
               Login
             </Link>
             <Link
-              href="/signup/sender"
+              href="/signup"
               className="px-4 py-2 text-sm font-medium bg-white hover:bg-gray-100 rounded-full transition-colors"
             >
               Signup
@@ -118,34 +108,26 @@ export default function Home() {
       {/* New Section - Same Day Delivery */}
       <section className="bg-[#006400] py-16 px-6 lg:px-16">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-12 text-white">
-            Same Day Delivery
-          </h2>
+          <h2 className="text-4xl font-bold text-center mb-12 text-white">Same Day Delivery</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
                 title: "Fast Pickup",
-                description:
-                  "Our carriers are always nearby, ensuring quick item pickup from your location.",
+                description: "Our carriers are always nearby, ensuring quick item pickup from your location.",
                 image: "/images/fast-pickup.jpeg",
               },
               {
                 title: "Secure Transport",
-                description:
-                  "Your items are handled with care and transported securely to their destination.",
+                description: "Your items are handled with care and transported securely to their destination.",
                 image: "/images/secure-transport.jpeg",
               },
               {
                 title: "Timely Delivery",
-                description:
-                  "We guarantee same-day delivery, so your items reach their destination quickly.",
+                description: "We guarantee same-day delivery, so your items reach their destination quickly.",
                 image: "/images/timely-delivery.jpeg",
               },
             ].map((item, index) => (
-              <div
-                key={index}
-                className="flex flex-col items-center text-center"
-              >
+              <div key={index} className="flex flex-col items-center text-center">
                 <div className="relative w-full h-64 mb-4 rounded-lg overflow-hidden">
                   <Image
                     src={item.image || "/placeholder.svg"}
@@ -155,18 +137,13 @@ export default function Home() {
                     className="transition-transform hover:scale-105 duration-300"
                   />
                 </div>
-                <h3 className="text-xl font-semibold mb-2 text-white">
-                  {item.title}
-                </h3>
+                <h3 className="text-xl font-semibold mb-2 text-white">{item.title}</h3>
                 <p className="text-gray-300">{item.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
-
-      {/* Add Site Footer */}
-      <SiteFooter />
     </div>
-  );
+  )
 }

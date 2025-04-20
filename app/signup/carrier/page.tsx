@@ -1,124 +1,94 @@
-"use client";
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Phone } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+"use client"
 
-export default function CarrierSignup() {
-  const [phone, setPhone] = useState("");
-  const [formattedPhone, setFormattedPhone] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
+import type React from "react"
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value.replace(/\D/g, "");
-    if (input.length <= 11) {
-      setPhone(input);
-      // Format with spaces as user types
-      let formattedValue = input;
-      if (input.length > 3) {
-        formattedValue = input.substring(0, 4) + " " + input.substring(4);
-      }
-      if (input.length > 7) {
-        formattedValue =
-          formattedValue.substring(0, 8) + " " + formattedValue.substring(8);
-      }
-      e.target.value = formattedValue.trim();
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Phone } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { CarrierOtpVerification } from "@/components/carrier-otp-verification"
+import { CarrierCreatePassword } from "@/components/carrier-create-password"
+
+export default function CarrierSignupPage() {
+  const router = useRouter()
+  const [step, setStep] = useState<"phone" | "otp" | "password">("phone")
+  const [phoneNumber, setPhoneNumber] = useState("")
+
+  const handlePhoneSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // In a real app, you would validate the phone number here
+    if (phoneNumber.length >= 10) {
+      // Send OTP to the phone number (would be implemented in a real app)
+      setStep("otp")
     }
-  };
+  }
 
-  useEffect(() => {
-    if (phone.length === 11) {
-      setFormattedPhone(`+234${phone.substring(1)}`);
-    } else {
-      setFormattedPhone("");
-    }
-  }, [phone]);
+  const handleOtpVerified = () => {
+    setStep("password")
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (phone.length !== 11) return;
-    setLoading(true);
-    setError("");
-
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
-        options: {
-          data: {
-            user_type: "carrier",
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      router.push(
-        `/signup/carrier/verify?phone=${encodeURIComponent(formattedPhone)}`
-      );
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to send OTP");
-      console.error("OTP error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handlePasswordCreated = () => {
+    // In a real app, you would save the user data to the database here
+    router.push("/signup/carrier/kyc")
+  }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Carrier Sign Up</h1>
-          <p className="mt-2 text-sm text-gray-500">
-            We'll send a verification code to this number
-          </p>
-        </div>
+    <div className="container flex min-h-screen items-center justify-center px-4">
+      <Card className="mx-auto w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Sign up as Carrier</CardTitle>
+          <CardDescription>
+            {step === "phone" && "Enter your phone number to create an account"}
+            {step === "otp" && "Enter the verification code sent to your phone"}
+            {step === "password" && "Create a password for your account"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {step === "phone" && (
+            <form onSubmit={handlePhoneSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <div className="flex">
+                  <Button variant="outline" type="button" className="rounded-r-none px-3" disabled>
+                    <Phone className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    className="rounded-l-none"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <Button type="submit" className="w-full">
+                Continue
+              </Button>
+            </form>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="space-y-4">
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-              <Input
-                type="tel"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                placeholder="0812 345 6789"
-                value={phone}
-                onChange={handlePhoneChange}
-                required
-                className="h-12 pl-10 text-lg"
-                maxLength={11}
-              />
-            </div>
-            {phone.length > 0 && phone.length < 11 && (
-              <p className="text-xs text-red-500">Please enter 11 digits</p>
-            )}
-            {error && <p className="text-xs text-red-500">{error}</p>}
+          {step === "otp" && <CarrierOtpVerification phoneNumber={phoneNumber} onVerified={handleOtpVerified} />}
+
+          {step === "password" && (
+            <CarrierCreatePassword phoneNumber={phoneNumber} onPasswordCreated={handlePasswordCreated} />
+          )}
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-4">
+          <div className="text-center text-sm">
+            Already have an account?{" "}
+            <Link href="/login" className="underline">
+              Login
+            </Link>
           </div>
-
-          <Button
-            type="submit"
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-lg font-medium"
-            disabled={phone.length !== 11 || loading}
-          >
-            {loading ? "Sending OTP..." : "Continue"}
-          </Button>
-        </form>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          Already have an account?{" "}
-          <Link
-            href="/login/carrier"
-            className="font-medium text-blue-600 hover:text-blue-700"
-          >
-            Login as carrier
-          </Link>
-        </div>
-      </div>
+        </CardFooter>
+      </Card>
     </div>
-  );
+  )
 }

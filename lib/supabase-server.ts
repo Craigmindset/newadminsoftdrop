@@ -131,4 +131,3 @@ export type SenderProfile = {
   email?: string
   address?: string
 }
-

@@ -112,4 +112,3 @@ export function CarrierSidebar({ onMenuItemClick }: CarrierSidebarProps) {
     </div>
   )
 }
-

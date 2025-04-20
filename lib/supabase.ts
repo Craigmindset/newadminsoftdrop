@@ -1,28 +1,35 @@
-import { createClient } from "@supabase/supabase-js";
-import { validateEnv } from "./env";
+import { createClient } from "@supabase/supabase-js"
 
-// Get validated environment variables
-const { supabaseUrl, supabaseKey } = validateEnv();
+// Get environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
+// Log environment variables for debugging (only in development)
+if (process.env.NODE_ENV === "development") {
+  console.log("Supabase URL:", supabaseUrl ? "Set" : "Not set")
+  console.log("Supabase Anon Key:", supabaseAnonKey ? "Set" : "Not set")
+}
+
+// Create the Supabase client directly
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
   },
-});
+})
+
+// Helper function to check if Supabase is properly configured
+export function isSupabaseConfigured() {
+  return Boolean(supabaseUrl && supabaseAnonKey)
+}
 
 export type SenderProfile = {
-  id?: string;
-  user_id: string;
-  phone_number: string;
-  created_at?: string;
-  updated_at?: string;
-  full_name?: string;
-  email?: string;
-  address?: string;
-};
-
-// Runtime check for proper configuration
-if (typeof window !== "undefined") {
-  console.log("Supabase initialized with URL:", supabaseUrl);
+  id?: string
+  user_id: string
+  phone_number: string
+  created_at?: string
+  updated_at?: string
+  full_name?: string
+  email?: string
+  address?: string
 }
