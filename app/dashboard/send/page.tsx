@@ -1,5 +1,7 @@
 "use client"
 
+import { DialogFooter } from "@/components/ui/dialog"
+
 import type React from "react"
 
 import { useState } from "react"
@@ -12,14 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Camera, Upload, AlertCircle, MapPin } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import PlacesAutocomplete from "@/components/places-autocomplete"
 import { Toaster } from "@/components/ui/toaster"
@@ -247,7 +242,7 @@ export default function SendItemPage() {
               )}
             </div>
 
-            <div className="bg-green-50 lg:bg-transparent p-4 rounded-lg space-y-4">
+            <div className="bg-green-50 lg:bg-transparent p-6 rounded-lg space-y-4">
               <h3 className="text-lg font-medium">Receiver Information</h3>
 
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
@@ -296,7 +291,7 @@ export default function SendItemPage() {
               </div>
             </div>
 
-            <div className="bg-blue-50 lg:bg-transparent p-4 rounded-lg space-y-4">
+            <div className="bg-blue-50 lg:bg-transparent p-6 rounded-lg space-y-4">
               <h3 className="text-lg font-medium">Pickup & Delivery Locations</h3>
 
               <div className="space-y-1">
