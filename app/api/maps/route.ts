@@ -87,9 +87,10 @@ async function handleAutocomplete(params: URLSearchParams) {
     return NextResponse.json({ error: "Input is required" }, { status: 400 })
   }
 
+  // Add components=country:ng to restrict results to Nigeria
   const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
     input,
-  )}&key=${GOOGLE_MAPS_API_KEY}`
+  )}&components=country:ng&key=${GOOGLE_MAPS_API_KEY}`
 
   const response = await fetch(url)
   const data = await response.json()

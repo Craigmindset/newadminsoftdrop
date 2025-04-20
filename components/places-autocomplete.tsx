@@ -59,32 +59,22 @@ export default function PlacesAutocomplete({
       try {
         setLoading(true)
 
-        // Use our server API endpoint instead of direct Google Maps API
-        const response = await fetch(`/api/maps?action=autocomplete&input=${encodeURIComponent(debouncedValue)}`)
+        // Use our server API endpoint for geocoding
+        const response = await fetch(`/api/maps?action=geocode&address=${encodeURIComponent(debouncedValue)}`)
         const data = await response.json()
 
-        if (data.predictions && data.predictions.length > 0) {
-          // For each prediction, get the place details to get coordinates
-          const detailsPromises = data.predictions.slice(0, 5).map(async (prediction: any) => {
-            const detailsResponse = await fetch(`/api/maps?action=place-details&placeId=${prediction.place_id}`)
-            const detailsData = await detailsResponse.json()
-
-            if (detailsData.result) {
-              return {
-                formatted_address: detailsData.result.formatted_address || prediction.description,
-                place_id: prediction.place_id,
-                geometry: {
-                  location: detailsData.result.geometry?.location || { lat: 0, lng: 0 },
-                },
-              }
-            }
-            return null
-          })
-
-          const placeDetails = await Promise.all(detailsPromises)
-          const validPlaces = placeDetails.filter((place) => place !== null) as PlaceResult[]
-
-          setSuggestions(validPlaces)
+        if (data.results && data.results.length > 0) {
+          const formattedSuggestions = data.results.map((result: any) => ({
+            formatted_address: result.formatted_address,
+            place_id: result.place_id,
+            geometry: {
+              location: {
+                lat: result.geometry.location.lat,
+                lng: result.geometry.location.lng,
+              },
+            },
+          }))
+          setSuggestions(formattedSuggestions)
           setShowSuggestions(true)
         } else {
           setSuggestions([])
@@ -242,7 +232,7 @@ export default function PlacesAutocomplete({
 
   if (apiError) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2 w-full">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Maps API Error</AlertTitle>
@@ -250,7 +240,7 @@ export default function PlacesAutocomplete({
         </Alert>
         <Input
           placeholder={placeholder}
-          className={className}
+          className={`${className} w-full`}
           value={value}
           onChange={(e) => setValue(e.target.value)}
         />
@@ -259,17 +249,21 @@ export default function PlacesAutocomplete({
   }
 
   return (
-    <div className="relative">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+    <div className="relative w-full">
+      <div className="flex gap-2 w-full">
+        <div className="relative flex-1 w-full">
           <Input
             ref={inputRef}
             type="text"
             placeholder={placeholder}
-            className={`${className} pr-10`}
+            className={`${className} pr-10 w-full`}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            onFocus={() => debouncedValue && suggestions.length > 0 && setShowSuggestions(true)}
+            onFocus={() => {
+              if (debouncedValue && debouncedValue.length >= 3) {
+                setShowSuggestions(true)
+              }
+            }}
             disabled={gettingCurrentLocation}
             autoComplete="off"
             autoCorrect="off"
@@ -283,7 +277,7 @@ export default function PlacesAutocomplete({
 
           {/* Suggestions dropdown */}
           {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-60 overflow-auto">
+            <div className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-60 overflow-auto">
               {suggestions.map((suggestion, index) => (
                 <div
                   key={suggestion.place_id || index}

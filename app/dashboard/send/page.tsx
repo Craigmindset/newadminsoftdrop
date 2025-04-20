@@ -19,6 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import PlacesAutocomplete from "@/components/places-autocomplete"
 import { Toaster } from "@/components/ui/toaster"
 import MapEmbed from "@/components/map-embed"
+import ContactPicker from "@/components/contact-picker"
 
 interface Coordinates {
   lat: number
@@ -68,11 +69,6 @@ export default function SendItemPage() {
     setDeliveryPin(value)
   }
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "").slice(0, 11)
-    setReceiverPhone(value)
-  }
-
   const handleDeliveryModeChange = (value: string) => {
     if (value === "door") {
       setShowDoorDeliveryDialog(true)
@@ -101,6 +97,13 @@ export default function SendItemPage() {
       setMapCoordinates(coordinates)
       setMapType(type)
       setShowMapDialog(true)
+    }
+  }
+
+  const handleContactSelect = (phoneNumber: string, name?: string) => {
+    setReceiverPhone(phoneNumber)
+    if (name && !receiverName) {
+      setReceiverName(name)
     }
   }
 
@@ -259,15 +262,11 @@ export default function SendItemPage() {
                 </div>
                 <div>
                   <Label htmlFor="receiver-phone">Receiver Phone</Label>
-                  <Input
-                    id="receiver-phone"
-                    type="tel"
-                    inputMode="numeric"
-                    placeholder="Enter receiver's phone number"
-                    className="mt-1"
+                  <ContactPicker
                     value={receiverPhone}
-                    onChange={handlePhoneChange}
-                    required
+                    onChange={setReceiverPhone}
+                    onContactSelect={handleContactSelect}
+                    className="mt-1"
                   />
                 </div>
               </div>
@@ -296,7 +295,7 @@ export default function SendItemPage() {
 
               <div className="space-y-1">
                 <Label htmlFor="pickup-location">Pickup Location</Label>
-                <div className="mt-1">
+                <div className="mt-1 w-full">
                   <PlacesAutocomplete
                     placeholder="Search for pickup address"
                     onPlaceSelect={handlePickupPlaceSelect}
@@ -322,7 +321,7 @@ export default function SendItemPage() {
 
               <div className="space-y-1">
                 <Label htmlFor="drop-location">Drop Location</Label>
-                <div className="mt-1">
+                <div className="mt-1 w-full">
                   <PlacesAutocomplete
                     placeholder="Search for delivery address"
                     onPlaceSelect={handleDropPlaceSelect}
