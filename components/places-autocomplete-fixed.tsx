@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { isGoogleMapsConfigured, loadGoogleMapsScript } from "@/lib/maps-config"
 
 interface Coordinates {
   lat: number
@@ -48,6 +49,36 @@ export default function PlacesAutocomplete({
   const [apiError, setApiError] = useState<string | null>(null)
   const { toast } = useToast()
 
+  // Check if Google Maps API is available
+  useEffect(() => {
+    const checkGoogleMapsApi = () => {
+      if (!isGoogleMapsConfigured()) {
+        setApiError("Google Maps API key is not configured properly")
+        return false
+      }
+
+      if (typeof window === "undefined") return false
+
+      if (!window.google || !window.google.maps) {
+        // Try to load the script
+        const loaded = loadGoogleMapsScript()
+        if (!loaded) {
+          setApiError("Failed to load Google Maps API")
+          return false
+        }
+
+        // Give it some time to load
+        setTimeout(checkGoogleMapsApi, 1000)
+        return false
+      }
+
+      setApiError(null)
+      return true
+    }
+
+    checkGoogleMapsApi()
+  }, [])
+
   // Fetch place suggestions when input changes
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -59,35 +90,73 @@ export default function PlacesAutocomplete({
       try {
         setLoading(true)
 
-        // Use our server API endpoint instead of direct Google Maps API
-        const response = await fetch(`/api/maps?action=autocomplete&input=${encodeURIComponent(debouncedValue)}`)
-        const data = await response.json()
+        // Check if we can use the Google Places API directly
+        if (window.google && window.google.maps && window.google.maps.places) {
+          // Use client-side Places API
+          const service = new window.google.maps.places.AutocompleteService()
+          service.getPlacePredictions({ input: debouncedValue }, (predictions, status) => {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+              // We need to get details for each prediction to get coordinates
+              const placesService = new window.google.maps.places.PlacesService(document.createElement("div"))
 
-        if (data.predictions && data.predictions.length > 0) {
-          // For each prediction, get the place details to get coordinates
-          const detailsPromises = data.predictions.slice(0, 5).map(async (prediction: any) => {
-            const detailsResponse = await fetch(`/api/maps?action=place-details&placeId=${prediction.place_id}`)
-            const detailsData = await detailsResponse.json()
+              const formattedSuggestions: PlaceResult[] = []
+              let processed = 0
 
-            if (detailsData.result) {
-              return {
-                formatted_address: detailsData.result.formatted_address || prediction.description,
-                place_id: prediction.place_id,
-                geometry: {
-                  location: detailsData.result.geometry?.location || { lat: 0, lng: 0 },
-                },
-              }
+              predictions.slice(0, 5).forEach((prediction) => {
+                placesService.getDetails(
+                  { placeId: prediction.place_id, fields: ["formatted_address", "geometry"] },
+                  (place, detailsStatus) => {
+                    processed++
+
+                    if (detailsStatus === window.google.maps.places.PlacesServiceStatus.OK && place) {
+                      formattedSuggestions.push({
+                        formatted_address: place.formatted_address || prediction.description,
+                        place_id: prediction.place_id,
+                        geometry: {
+                          location: {
+                            lat: place.geometry?.location.lat() || 0,
+                            lng: place.geometry?.location.lng() || 0,
+                          },
+                        },
+                      })
+                    }
+
+                    // When all places are processed, update state
+                    if (processed === Math.min(predictions.length, 5)) {
+                      setSuggestions(formattedSuggestions)
+                      setShowSuggestions(true)
+                      setLoading(false)
+                    }
+                  },
+                )
+              })
+            } else {
+              setSuggestions([])
+              setLoading(false)
             }
-            return null
           })
-
-          const placeDetails = await Promise.all(detailsPromises)
-          const validPlaces = placeDetails.filter((place) => place !== null) as PlaceResult[]
-
-          setSuggestions(validPlaces)
-          setShowSuggestions(true)
         } else {
-          setSuggestions([])
+          // Fallback to our server API
+          const response = await fetch(`/api/maps?action=geocode&address=${encodeURIComponent(debouncedValue)}`)
+          const data = await response.json()
+
+          if (data.results && data.results.length > 0) {
+            const formattedSuggestions = data.results.map((result: any) => ({
+              formatted_address: result.formatted_address,
+              place_id: result.place_id,
+              geometry: {
+                location: {
+                  lat: result.geometry.location.lat,
+                  lng: result.geometry.location.lng,
+                },
+              },
+            }))
+            setSuggestions(formattedSuggestions)
+            setShowSuggestions(true)
+          } else {
+            setSuggestions([])
+          }
+          setLoading(false)
         }
       } catch (error) {
         console.error("Error fetching suggestions:", error)
@@ -97,7 +166,6 @@ export default function PlacesAutocomplete({
           variant: "destructive",
         })
         setSuggestions([])
-      } finally {
         setLoading(false)
       }
     }
