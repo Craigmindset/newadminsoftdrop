@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Textarea } from "@/components/ui/textarea"
 import { Camera, Upload, AlertCircle } from "lucide-react"
 import {
   Dialog,
@@ -22,6 +21,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import PlacesAutocomplete from "@/components/places-autocomplete"
+
+declare global {
+  interface Window {
+    google: any
+  }
+}
 
 export default function SendItemPage() {
   const router = useRouter()
@@ -34,6 +40,8 @@ export default function SendItemPage() {
   const [deliveryPin, setDeliveryPin] = useState("")
   const [pickupLocation, setPickupLocation] = useState("")
   const [dropLocation, setDropLocation] = useState("")
+  const [pickupCoordinates, setPickupCoordinates] = useState<{ lat: number; lng: number } | null>(null)
+  const [dropCoordinates, setDropCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [itemImage, setItemImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [deliveryMode, setDeliveryMode] = useState<"door" | "arrival" | "">("")
@@ -69,9 +77,36 @@ export default function SendItemPage() {
     // Here you would typically update pricing or add fees
   }
 
+  const handlePickupPlaceSelect = (place: google.maps.places.PlaceResult) => {
+    if (place.formatted_address) {
+      setPickupLocation(place.formatted_address)
+    }
+    if (place.geometry?.location) {
+      setPickupCoordinates({
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
+      })
+    }
+  }
+
+  const handleDropPlaceSelect = (place: google.maps.places.PlaceResult) => {
+    if (place.formatted_address) {
+      setDropLocation(place.formatted_address)
+    }
+    if (place.geometry?.location) {
+      setDropCoordinates({
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
+      })
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // In a real app, you would validate and process the form data
+    // You can now include the coordinates in your submission
+    console.log("Pickup coordinates:", pickupCoordinates)
+    console.log("Drop coordinates:", dropCoordinates)
     router.push("/dashboard/send/carriers")
   }
 
@@ -246,25 +281,21 @@ export default function SendItemPage() {
 
               <div>
                 <Label htmlFor="pickup-location">Pickup Location</Label>
-                <Textarea
-                  id="pickup-location"
-                  placeholder="Enter detailed pickup address"
+                <PlacesAutocomplete
+                  placeholder="Search for pickup address"
+                  onPlaceSelect={handlePickupPlaceSelect}
                   className="mt-1"
-                  value={pickupLocation}
-                  onChange={(e) => setPickupLocation(e.target.value)}
-                  required
+                  defaultValue={pickupLocation}
                 />
               </div>
 
               <div>
                 <Label htmlFor="drop-location">Drop Location</Label>
-                <Textarea
-                  id="drop-location"
-                  placeholder="Enter detailed delivery address"
+                <PlacesAutocomplete
+                  placeholder="Search for delivery address"
+                  onPlaceSelect={handleDropPlaceSelect}
                   className="mt-1"
-                  value={dropLocation}
-                  onChange={(e) => setDropLocation(e.target.value)}
-                  required
+                  defaultValue={dropLocation}
                 />
               </div>
             </div>
