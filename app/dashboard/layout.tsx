@@ -1,9 +1,11 @@
 import type React from "react"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
-import { Toaster } from "@/components/ui/toaster"
 import { checkSenderSession } from "@/app/actions/sender-auth"
 import { redirect } from "next/navigation"
+
+// Create a separate client component for the Toaster
+import { ClientToaster } from "@/components/client-toaster"
 
 export default async function DashboardLayout({
   children,
@@ -27,7 +29,7 @@ export default async function DashboardLayout({
         </div>
         <main className="flex-1 p-4 md:p-6 w-full overflow-x-hidden">{children}</main>
       </div>
-      <Toaster />
+      <ClientToaster />
     </div>
   )
 }
