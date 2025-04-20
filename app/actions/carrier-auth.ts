@@ -1,9 +1,6 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { cookies } from "next/headers"
-import { getSupabaseServer } from "@/lib/supabase-server"
-import { redirect } from "next/navigation"
 
 export async function signUpCarrier(phoneNumber: string, password: string) {
   try {
@@ -54,102 +51,4 @@ export async function sendCarrierOtp(phoneNumber: string) {
     console.error("Send carrier OTP error:", error)
     return { success: false, error: "An unexpected error occurred" }
   }
-}
-
-export async function authenticateCarrier(phoneNumber: string, pin: string) {
-  try {
-    const supabase = getSupabaseServer()
-
-    // Format phone number to ensure it has the correct format
-    const formattedPhone = phoneNumber.startsWith("+") ? phoneNumber : `+${phoneNumber.replace(/^0/, "234")}`
-
-    console.log(`Attempting to authenticate carrier with phone: ${formattedPhone}`)
-
-    // Sign in with phone and password (PIN)
-    const { data, error } = await supabase.auth.signInWithPassword({
-      phone: formattedPhone,
-      password: pin,
-    })
-
-    if (error) {
-      console.error("Carrier login error:", error)
-      return { success: false, error: error.message }
-    }
-
-    if (!data.user || !data.session) {
-      return { success: false, error: "Authentication failed" }
-    }
-
-    // Check if user is a carrier in the carrier_profiles table
-    const { data: carrierProfile, error: profileError } = await supabase
-      .from("carrier_profiles")
-      .select("*")
-      .eq("user_id", data.user.id)
-      .single()
-
-    if (profileError || !carrierProfile) {
-      console.error("Not a carrier profile:", profileError)
-      return { success: false, error: "Account not found or not a carrier" }
-    }
-
-    // Set session cookie with updated settings for production compatibility
-    cookies().set(
-      "sb-session",
-      JSON.stringify({
-        userId: data.user.id,
-        sessionId: data.session.access_token,
-        role: "carrier",
-        phoneNumber: formattedPhone,
-      }),
-      {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-        path: "/",
-        // Removed domain specification to use current domain automatically
-        sameSite: "lax", // Added for better security and cookie handling
-      },
-    )
-
-    return {
-      success: true,
-      userId: data.user.id,
-      // Add redirect URL for hard navigation
-      redirectUrl: "/carrier/dashboard",
-    }
-  } catch (error) {
-    console.error("Carrier authentication error:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred",
-    }
-  }
-}
-
-export async function checkCarrierSession() {
-  const sessionCookie = cookies().get("sb-session")
-
-  if (!sessionCookie?.value) {
-    return null
-  }
-
-  try {
-    const session = JSON.parse(sessionCookie.value)
-    return session && session.role === "carrier" ? session : null
-  } catch (error) {
-    console.error("Session parsing error:", error)
-    return null
-  }
-}
-
-export async function logoutCarrier() {
-  try {
-    const supabase = getSupabaseServer()
-    await supabase.auth.signOut()
-    cookies().delete("sb-session")
-  } catch (error) {
-    console.error("Logout error:", error)
-  }
-
-  redirect("/login/carrier")
 }
