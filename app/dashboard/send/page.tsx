@@ -74,7 +74,7 @@ export default function SendItemPage() {
   }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "")
+    const value = e.target.value.replace(/\D/g, "").slice(0, 11)
     setReceiverPhone(value)
   }
 
@@ -247,7 +247,7 @@ export default function SendItemPage() {
               )}
             </div>
 
-            <div className="space-y-4">
+            <div className="bg-green-50 lg:bg-transparent p-4 rounded-lg space-y-4">
               <h3 className="text-lg font-medium">Receiver Information</h3>
 
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
@@ -296,7 +296,7 @@ export default function SendItemPage() {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="bg-blue-50 lg:bg-transparent p-4 rounded-lg space-y-4">
               <h3 className="text-lg font-medium">Pickup & Delivery Locations</h3>
 
               <div className="space-y-1">
