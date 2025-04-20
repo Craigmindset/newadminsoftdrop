@@ -147,7 +147,11 @@ export default function SendItemPage() {
             <div className="space-y-4">
               <div>
                 <Label>Select Route</Label>
-                <RadioGroup value={route} onValueChange={setRoute} className="flex flex-row space-x-4 mt-2">
+                <RadioGroup
+                  value={route}
+                  onValueChange={setRoute}
+                  className="flex flex-col space-y-1 sm:flex-row sm:space-x-4 sm:space-y-0 mt-2"
+                >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="intercity" id="intercity" />
                     <Label htmlFor="intercity" className="font-normal">
