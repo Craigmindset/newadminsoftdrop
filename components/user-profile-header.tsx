@@ -46,8 +46,12 @@ export function UserProfileHeader({ profile }: UserProfileHeaderProps) {
       <CardContent className="p-6">
         <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
           <Avatar className="h-24 w-24 border">
-            <AvatarImage src={profile.profile_image_url || ""} alt={profile.full_name || "User"} />
-            <AvatarFallback className="text-2xl">{getInitials()}</AvatarFallback>
+            <AvatarImage
+              src={profile.profile_image_url || ""}
+              alt={profile.full_name || "User"}
+              className="object-cover"
+            />
+            <AvatarFallback className="text-2xl bg-primary text-primary-foreground">{getInitials()}</AvatarFallback>
           </Avatar>
 
           <div className="flex-1 space-y-4 text-center md:text-left">
