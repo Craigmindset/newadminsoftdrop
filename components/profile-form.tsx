@@ -71,6 +71,12 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       }
     } catch (error) {
       console.error("Profile form submission error:", error)
+      // Log more details if available
+      if (error instanceof Error) {
+        console.error("Error name:", error.name)
+        console.error("Error message:", error.message)
+        console.error("Error stack:", error.stack)
+      }
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",

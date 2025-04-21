@@ -28,6 +28,9 @@ function getServiceSupabase() {
 }
 
 export async function updateSenderProfile(formData: ProfileFormData) {
+  console.log("Environment:", process.env.VERCEL_ENV || "local")
+  console.log("Supabase URL available:", !!process.env.NEXT_PUBLIC_SUPABASE_URL)
+  console.log("Supabase service role key available:", !!process.env.SUPABASE_SERVICE_ROLE_KEY)
   try {
     // Get the session from cookies
     const sessionCookie = cookies().get("sb-session")
