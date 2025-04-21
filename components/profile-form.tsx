@@ -62,6 +62,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
           description: "Your profile information has been updated successfully.",
         })
       } else {
+        console.error("Profile update error details:", result.error)
         toast({
           title: "Update Failed",
           description: result.error || "Failed to update profile. Please try again.",
@@ -69,9 +70,10 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         })
       }
     } catch (error) {
+      console.error("Profile form submission error:", error)
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
         variant: "destructive",
       })
     } finally {
