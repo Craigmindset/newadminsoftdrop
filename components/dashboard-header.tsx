@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Bell, LogOut, Menu, User } from "lucide-react"
+import { Bell, LogOut, Menu, User, Settings } from "lucide-react"
 import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
@@ -18,10 +18,13 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { useState } from "react"
 import { logoutSender } from "@/app/actions/sender-auth"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useProfileContext } from "@/context/profile-context"
 
 export function DashboardHeader() {
   const router = useRouter()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const { profile } = useProfileContext()
 
   const closeSheet = () => {
     setIsSheetOpen(false)
@@ -29,6 +32,18 @@ export function DashboardHeader() {
 
   const handleLogout = async () => {
     await logoutSender()
+  }
+
+  // Get user's initials for avatar fallback
+  const getInitials = () => {
+    if (profile?.full_name) {
+      const nameParts = profile.full_name.split(" ")
+      if (nameParts.length >= 2) {
+        return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+      }
+      return profile.full_name[0].toUpperCase()
+    }
+    return "U" // Default fallback
   }
 
   return (
@@ -66,22 +81,39 @@ export function DashboardHeader() {
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <User className="h-5 w-5" />
-                <span className="sr-only">User menu</span>
+              <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 p-0">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profile?.profile_image_url || ""} alt={profile?.full_name || "User"} />
+                  <AvatarFallback>{getInitials()}</AvatarFallback>
+                </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                {profile?.full_name ? (
+                  <div className="flex flex-col">
+                    <span>{profile.full_name}</span>
+                    {profile.email && <span className="text-xs text-muted-foreground">{profile.email}</span>}
+                  </div>
+                ) : (
+                  "My Account"
+                )}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/profile">Profile</Link>
+                <Link href="/dashboard/profile" className="flex items-center">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings">Settings</Link>
+                <Link href="/dashboard/settings" className="flex items-center">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
+              <DropdownMenuItem onClick={handleLogout} className="flex items-center">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Logout</span>
               </DropdownMenuItem>

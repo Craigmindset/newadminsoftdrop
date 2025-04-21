@@ -21,6 +21,19 @@ export type ProfileUpdateResult = {
   context?: string
 }
 
+// Only updating the getSenderProfile function to include profile_image_url in the return type
+export type SenderProfile = {
+  id?: string
+  user_id: string
+  phone_number: string
+  created_at?: string
+  updated_at?: string
+  full_name?: string
+  email?: string
+  address?: string
+  profile_image_url?: string
+}
+
 // Create a Supabase client with the service role key to bypass RLS
 function getServiceSupabase() {
   try {
@@ -336,7 +349,7 @@ export async function updateSenderProfile(formData: ProfileFormData): Promise<Pr
   }
 }
 
-export async function getSenderProfile() {
+export async function getSenderProfile(): Promise<SenderProfile | null> {
   const timestamp = new Date().toISOString()
   let userId: string | undefined
   let context = "initializing"
@@ -382,7 +395,7 @@ export async function getSenderProfile() {
         return null
       }
 
-      return data
+      return (data as SenderProfile) || null
     } catch (error) {
       logError("Exception while fetching profile in getSenderProfile", error, userId, context)
       return null
