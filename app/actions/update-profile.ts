@@ -54,20 +54,23 @@ export async function updateSenderProfile(formData: FormData) {
 
     if (profileImage) {
       try {
-        // Use the default "public" bucket instead of creating a new one
-        const bucketName = "public"
+        // Use the known bucket name directly
+        const bucketName = "profile_images"
+        console.log(`Using bucket: ${bucketName}`)
 
         // Generate a unique filename
         const fileExt = profileImage.name.split(".").pop()
-        const fileName = `profile-images/${userId}-${Date.now()}.${fileExt}`
+        const fileName = `profile-${userId}-${Date.now()}.${fileExt}`
 
-        // If there was a previous image, delete it from storage
+        // If there was a previous image, try to delete it
         if (existingProfile?.profile_image_url) {
           try {
+            // Extract the filename from the URL
             const oldUrl = new URL(existingProfile.profile_image_url)
-            const oldPath = oldUrl.pathname.split("/").slice(-2).join("/")
-            if (oldPath.startsWith("public/")) {
-              await supabase.storage.from(bucketName).remove([oldPath.replace("public/", "")])
+            const oldPath = oldUrl.pathname.split("/").pop()
+
+            if (oldPath) {
+              await supabase.storage.from(bucketName).remove([oldPath])
             }
           } catch (deleteError) {
             console.error("Error deleting old profile image:", deleteError)
@@ -98,18 +101,6 @@ export async function updateSenderProfile(formData: FormData) {
       }
     } else if (removeProfileImage) {
       // If the user wants to remove their profile image
-      if (existingProfile?.profile_image_url) {
-        try {
-          const oldUrl = new URL(existingProfile.profile_image_url)
-          const oldPath = oldUrl.pathname.split("/").slice(-2).join("/")
-          if (oldPath.startsWith("public/")) {
-            await supabase.storage.from("public").remove([oldPath.replace("public/", "")])
-          }
-        } catch (deleteError) {
-          console.error("Error deleting profile image:", deleteError)
-          // Continue even if delete fails
-        }
-      }
       profile_image_url = null
     }
 
@@ -156,6 +147,7 @@ export async function updateSenderProfile(formData: FormData) {
 }
 
 export async function getSenderProfile() {
+  // This function remains unchanged
   try {
     // Get the session from cookies
     const sessionCookie = cookies().get("sb-session")
