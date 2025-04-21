@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { updateSenderProfile, type ProfileFormData } from "@/app/actions/update-profile"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Check, AlertCircle, Camera, X } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
 
@@ -41,6 +41,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(initialData?.profile_image_url || null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [storageError, setStorageError] = useState(false)
 
   const [formData, setFormData] = useState<ProfileFormData>({
     fullName: initialData?.full_name || "",
@@ -72,6 +73,14 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   }
 
   const handleImageClick = () => {
+    if (storageError) {
+      toast({
+        title: "Image Upload Unavailable",
+        description: "Profile image upload is currently unavailable. Please try again later.",
+        variant: "destructive",
+      })
+      return
+    }
     fileInputRef.current?.click()
   }
 
@@ -162,6 +171,12 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         router.refresh()
       } else {
         setError(result.error || "Failed to update profile. Please try again.")
+
+        // Check if the error is related to storage
+        if (result.error?.includes("Storage") || result.error?.includes("bucket")) {
+          setStorageError(true)
+        }
+
         toast({
           title: "Update Failed",
           description: result.error || "Please try again.",
@@ -220,7 +235,17 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         {error && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {error}
+              {storageError && (
+                <div className="mt-2 text-sm">
+                  <AlertTitle>Storage Not Available</AlertTitle>
+                  <p>
+                    Profile image upload is currently unavailable. You can still update your other profile information.
+                  </p>
+                </div>
+              )}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -229,7 +254,10 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
             {/* Profile Image Upload */}
             <div className="flex flex-col items-center space-y-3">
               <Label htmlFor="profileImage">Profile Picture</Label>
-              <div className="relative cursor-pointer group" onClick={handleImageClick}>
+              <div
+                className={`relative ${!storageError ? "cursor-pointer" : ""} group`}
+                onClick={storageError ? undefined : handleImageClick}
+              >
                 <Avatar className="h-24 w-24 border-2 border-muted">
                   {isUploading ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
@@ -243,11 +271,13 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
                   )}
                 </Avatar>
 
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Camera className="h-8 w-8 text-white" />
-                </div>
+                {!storageError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera className="h-8 w-8 text-white" />
+                  </div>
+                )}
 
-                {profileImagePreview && !isUploading && (
+                {profileImagePreview && !isUploading && !storageError && (
                   <Button
                     type="button"
                     variant="destructive"
@@ -266,12 +296,14 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
                 accept="image/*"
                 className="hidden"
                 onChange={handleImageChange}
-                disabled={isUploading}
+                disabled={isUploading || storageError}
               />
               <p className="text-xs text-muted-foreground text-center">
-                Click to upload or change your profile picture
+                {storageError
+                  ? "Profile image upload is currently unavailable"
+                  : "Click to upload or change your profile picture"}
                 <br />
-                (Max size: 2MB)
+                {!storageError && "(Max size: 2MB)"}
               </p>
             </div>
 
