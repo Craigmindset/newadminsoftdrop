@@ -20,9 +20,6 @@ import { CarrierSidebar } from "@/components/carrier-sidebar"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 
-// Import the logoutCarrier function
-import { logoutCarrier } from "@/app/actions/carrier-auth"
-
 export function CarrierHeader() {
   const router = useRouter()
   const [isOnline, setIsOnline] = useState(false)
@@ -32,10 +29,9 @@ export function CarrierHeader() {
     setIsSheetOpen(false)
   }
 
-  // Update the handleLogout function
-  const handleLogout = async () => {
+  const handleLogout = () => {
     // In a real app, you would handle logout logic here
-    await logoutCarrier()
+    router.push("/")
   }
 
   return (
