@@ -2,17 +2,18 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label, Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { updateSenderProfile, type ProfileFormData } from "@/app/actions/update-profile"
-import { uploadProfileImage } from "@/app/actions/upload-image"
-import { Loader2 } from "lucide-react"
-import MobileImageUpload from "./mobile-image-upload"
-import { isMobileDevice } from "@/lib/mobile-image-utils"
-import useNotifications from "@/hooks/use-notifications"
+import { useToast } from "@/components/ui/use-toast"
+import { Loader2, Check, AlertCircle, Camera, X } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useRouter } from "next/navigation"
 
 type SenderProfile = {
   id?: string
@@ -31,20 +32,24 @@ interface ProfileFormProps {
 }
 
 export default function ProfileForm({ initialData }: ProfileFormProps) {
+  const { toast } = useToast()
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [profileImage, setProfileImage] = useState<File | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(initialData?.profile_image_url || null)
   const [isUploading, setIsUploading] = useState(false)
-  const [profileImage, setProfileImage] = useState<string | null>(initialData?.profile_image_url || null)
-  const [imageFile, setImageFile] = useState<File | Blob | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [storageError, setStorageError] = useState(false)
+
   const [formData, setFormData] = useState<ProfileFormData>({
     fullName: initialData?.full_name || "",
     email: initialData?.email || "",
     address: initialData?.address || "",
   })
-  const isMobile = isMobileDevice()
-  const { addNotification } = useNotifications()
-  const [success, setSuccess] = useState(false)
 
-  // Reset form data if initialData changes
+  // Update form data if initialData changes
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -52,7 +57,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         email: initialData.email || "",
         address: initialData.address || "",
       })
-      setProfileImage(initialData.profile_image_url || null)
+      setProfileImagePreview(initialData.profile_image_url || null)
     }
   }, [initialData])
 
@@ -62,210 +67,309 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       ...prev,
       [name]: value,
     }))
+    // Clear success and error states when form is modified
+    if (success) setSuccess(false)
+    if (error) setError(null)
   }
 
-  const handleImageSelect = (file: File | Blob) => {
-    setImageFile(file)
+  const handleImageClick = () => {
+    if (storageError) {
+      toast({
+        title: "Image Upload Unavailable",
+        description: "Profile image upload is currently unavailable. Please try again later.",
+        variant: "destructive",
+      })
+      return
+    }
+    fileInputRef.current?.click()
   }
 
-  const handleImageRemove = () => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+
+      // Validate file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Image must be less than 2MB",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select an image file",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setProfileImage(file)
+      setProfileImagePreview(URL.createObjectURL(file))
+
+      // Clear success and error states when form is modified
+      if (success) setSuccess(false)
+      if (error) setError(null)
+    }
+  }
+
+  const handleRemoveImage = (e: React.MouseEvent) => {
+    e.stopPropagation()
     setProfileImage(null)
-    setImageFile(null)
+    setProfileImagePreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+
+    // Clear success and error states when form is modified
+    if (success) setSuccess(false)
+    if (error) setError(null)
   }
 
-  const handleImageUpload = async () => {
-    if (!imageFile) return
-
-    setIsUploading(true)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setSuccess(false)
+    setError(null)
 
     try {
-      const formData = new FormData()
-      formData.append("file", imageFile)
+      // Basic validation
+      if (formData.email && !isValidEmail(formData.email)) {
+        setError("Please enter a valid email address")
+        setIsSubmitting(false)
+        return
+      }
 
-      // Log upload attempt
-      console.log(
-        `[Client] Uploading image: ${imageFile instanceof File ? imageFile.name : "Blob"}, size: ${imageFile.size} bytes, type: ${imageFile.type}`,
-      )
+      // Create FormData object for file upload
+      const submitData = new FormData()
+      submitData.append("fullName", formData.fullName || "")
+      submitData.append("email", formData.email || "")
+      submitData.append("address", formData.address || "")
 
-      const result = await uploadProfileImage(formData)
+      if (profileImage) {
+        setIsUploading(true)
+        submitData.append("profileImage", profileImage)
+      } else if (profileImagePreview === null && initialData?.profile_image_url) {
+        // If the user removed the image
+        submitData.append("removeProfileImage", "true")
+      }
+
+      const result = await updateSenderProfile(submitData)
 
       if (result.success) {
-        setProfileImage(result.url || null)
-        addNotification({
-          title: "Image Uploaded",
-          description: "Your profile image has been updated successfully.",
-          type: "success",
+        setSuccess(true)
+        toast({
+          title: "Profile Updated",
+          description: "Your profile information has been updated successfully.",
         })
 
-        // Log success details
-        console.log("[Client] Upload successful:", result.details)
+        // Refresh the page to show updated data
+        router.refresh()
       } else {
-        addNotification({
-          title: "Upload Failed",
-          description: result.error || "Failed to upload image. Please try again.",
-          type: "error",
+        setError(result.error || "Failed to update profile. Please try again.")
+
+        // Check if the error is related to storage
+        if (result.error?.includes("Storage") || result.error?.includes("bucket")) {
+          setStorageError(true)
+        }
+
+        toast({
+          title: "Update Failed",
+          description: result.error || "Please try again.",
+          variant: "destructive",
         })
       }
     } catch (error) {
-      console.error("[Client] Exception during upload:", error)
-
-      addNotification({
+      console.error("Profile update error:", error)
+      setError("An unexpected error occurred. Please try again.")
+      toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
-        type: "error",
+        description: "Please try again.",
+        variant: "destructive",
       })
     } finally {
+      setIsSubmitting(false)
       setIsUploading(false)
     }
   }
 
-  const handleSubmit = async (e: React.Event) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  // Helper function to validate email format
+  function isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
 
-    try {
-      // Upload image first if there's a new image
-      if (imageFile) {
-        await handleImageUpload()
-      }
+  // Check if form data has changed from initial values
+  function hasChanges(): boolean {
+    return (
+      formData.fullName !== (initialData?.full_name || "") ||
+      formData.email !== (initialData?.email || "") ||
+      formData.address !== (initialData?.address || "") ||
+      profileImage !== null ||
+      (profileImagePreview === null && initialData?.profile_image_url !== null)
+    )
+  }
 
-      // Log client-side submission attempt
-      console.log(`[${new Date().toISOString()}] Profile update submission attempt`, {
-        environment: process.env.NODE_ENV,
-      })
-
-      const result = await updateSenderProfile(formData)
-
-      if (result.success) {
-        setSuccess(true)
-        addNotification({
-          title: "Profile Updated",
-          description: "Your profile information has been updated successfully.",
-          type: "success",
-        })
-      } else {
-        addNotification({
-          title: "Update Failed",
-          description: result.error || "Failed to update profile. Please try again.",
-          type: "error",
-        })
-      }
-    } catch (error) {
-      // Handle unexpected client-side errors
-      console.error("Profile form submission error:", error)
-
-      // Log detailed error information
-      const errorInfo = {
-        timestamp: new Date().toISOString(),
-        error:
-          error instanceof Error
-            ? {
-                name: error.name,
-                message: error.message,
-                stack: error.stack,
-              }
-            : String(error),
-        environment: process.env.NODE_ENV,
-      }
-      console.error("Client-side error details:", errorInfo)
-
-      addNotification({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
-        type: "error",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
+  // Get initials for avatar fallback
+  const getInitials = () => {
+    if (!formData.fullName) return "U"
+    return formData.fullName
+      .split(" ")
+      .map((name) => name[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2)
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-5">
-      <Card className="md:col-span-3">
-        <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-          <CardDescription>Update your personal details</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    name="fullName"
-                    placeholder="Enter your full name"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                  />
+    <Card>
+      <CardHeader>
+        <CardTitle>Personal Information</CardTitle>
+        <CardDescription>Update your personal details</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error}
+              {storageError && (
+                <div className="mt-2 text-sm">
+                  <AlertTitle>Storage Not Available</AlertTitle>
+                  <p>
+                    Profile image upload is currently unavailable. You can still update your other profile information.
+                  </p>
                 </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="Enter your email address"
-                    value={formData.email}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            {/* Profile Image Upload */}
+            <div className="flex flex-col items-center space-y-3">
+              <Label htmlFor="profileImage">Profile Picture</Label>
+              <div
+                className={`relative ${!storageError ? "cursor-pointer" : ""} group`}
+                onClick={storageError ? undefined : handleImageClick}
+              >
+                <Avatar className="h-24 w-24 border-2 border-muted">
+                  {isUploading ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
+                      <Loader2 className="h-8 w-8 animate-spin text-white" />
+                    </div>
+                  ) : (
+                    <>
+                      <AvatarImage src={profileImagePreview || ""} alt="Profile" />
+                      <AvatarFallback className="text-2xl">{getInitials()}</AvatarFallback>
+                    </>
+                  )}
+                </Avatar>
 
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Textarea
-                  id="address"
-                  name="address"
-                  placeholder="Enter your address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phoneNumber">Phone Number</Label>
-                <Input id="phoneNumber" value={initialData?.phone_number || ""} disabled className="bg-muted/50" />
-                <p className="text-xs text-muted-foreground">
-                  This is the phone number you used to register. It cannot be changed.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  "Update Profile"
+                {!storageError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera className="h-8 w-8 text-white" />
+                  </div>
                 )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
 
-      <Card className="md:col-span-2">
-        <CardHeader>
-          <CardTitle>Profile Picture</CardTitle>
-          <CardDescription>Upload a profile picture</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center space-y-4">
-          <MobileImageUpload
-            initialImage={profileImage}
-            userName={formData.fullName}
-            onImageSelect={handleImageSelect}
-            onImageRemove={handleImageRemove}
-            isUploading={isUploading}
-          />
-        </CardContent>
-      </Card>
-    </div>
+                {profileImagePreview && !isUploading && !storageError && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                    onClick={handleRemoveImage}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                id="profileImage"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+                disabled={isUploading || storageError}
+              />
+              <p className="text-xs text-muted-foreground text-center">
+                {storageError
+                  ? "Profile image upload is currently unavailable"
+                  : "Click to upload or change your profile picture"}
+                <br />
+                {!storageError && "(Max size: 2MB)"}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                name="fullName"
+                placeholder="Enter your full name"
+                value={formData.fullName}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="Enter your email address"
+                value={formData.email}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Textarea
+                id="address"
+                name="address"
+                placeholder="Enter your address"
+                value={formData.address}
+                onChange={handleChange}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Input id="phoneNumber" value={initialData?.phone_number || ""} disabled className="bg-muted/50" />
+              <p className="text-xs text-muted-foreground">
+                This is the phone number you used to register. It cannot be changed.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button type="submit" disabled={isSubmitting || !hasChanges()} className="w-full md:w-auto">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isUploading ? "Uploading..." : "Updating..."}
+                </>
+              ) : success ? (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Updated
+                </>
+              ) : (
+                "Update Profile"
+              )}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
