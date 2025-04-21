@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Bell, LogOut, Menu } from "lucide-react"
+import { Bell, LogOut, Menu, User, Settings } from "lucide-react"
 import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
@@ -16,43 +16,18 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { logoutSender } from "@/app/actions/sender-auth"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useProfileContext } from "@/context/profile-context"
+import useNotifications from "@/hooks/use-notifications"
+import { Badge } from "@/components/ui/badge"
 
 export function DashboardHeader() {
   const router = useRouter()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [profileData, setProfileData] = useState<{
-    name?: string
-    imageUrl?: string
-  }>({})
-
-  useEffect(() => {
-    // Fetch profile data when component mounts
-    const fetchProfileData = async () => {
-      try {
-        const response = await fetch("/api/profile", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          setProfileData({
-            name: data.full_name,
-            imageUrl: data.profile_image_url,
-          })
-        }
-      } catch (error) {
-        console.error("Failed to fetch profile data:", error)
-      }
-    }
-
-    fetchProfileData()
-  }, [])
+  const { profile } = useProfileContext()
+  const { unreadCount } = useNotifications()
 
   const closeSheet = () => {
     setIsSheetOpen(false)
@@ -62,15 +37,16 @@ export function DashboardHeader() {
     await logoutSender()
   }
 
-  // Get initials for avatar fallback
+  // Get user's initials for avatar fallback
   const getInitials = () => {
-    if (!profileData.name) return "U"
-    return profileData.name
-      .split(" ")
-      .map((name) => name[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2)
+    if (profile?.full_name) {
+      const nameParts = profile.full_name.split(" ")
+      if (nameParts.length >= 2) {
+        return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+      }
+      return profile.full_name[0].toUpperCase()
+    }
+    return "U" // Default fallback
   }
 
   return (
@@ -102,30 +78,50 @@ export function DashboardHeader() {
           </Link>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-            <span className="sr-only">Notifications</span>
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/dashboard/notifications">
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <Badge className="absolute top-1 right-1 rounded-full px-2 py-0.5 text-xs">{unreadCount}</Badge>
+              )}
+              <span className="sr-only">Notifications</span>
+            </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 p-0">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={profileData.imageUrl || ""} alt={profileData.name || "User"} />
+                  <AvatarImage src={profile?.profile_image_url || ""} alt={profile?.full_name || "User"} />
                   <AvatarFallback>{getInitials()}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                {profile?.full_name ? (
+                  <div className="flex flex-col">
+                    <span>{profile.full_name}</span>
+                    {profile.email && <span className="text-xs text-muted-foreground">{profile.email}</span>}
+                  </div>
+                ) : (
+                  "My Account"
+                )}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/profile">Profile</Link>
+                <Link href="/dashboard/profile" className="flex items-center">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings">Settings</Link>
+                <Link href="/dashboard/settings" className="flex items-center">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
+              <DropdownMenuItem onClick={handleLogout} className="flex items-center">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Logout</span>
               </DropdownMenuItem>
