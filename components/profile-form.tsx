@@ -1,5 +1,7 @@
 "use client"
 
+import { Textarea } from "@/components/ui/textarea"
+
 import type React from "react"
 
 import { useState, useEffect } from "react"
@@ -7,14 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { updateSenderProfile, type ProfileFormData } from "@/app/actions/update-profile"
 import { uploadProfileImage } from "@/app/actions/upload-image"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Check, AlertCircle, RefreshCw } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Loader2, Check } from "lucide-react"
 import MobileImageUpload from "./mobile-image-upload"
 import { isMobileDevice } from "@/lib/mobile-image-utils"
+import useNotifications from "@/hooks/use-notifications"
 
 type SenderProfile = {
   id?: string
@@ -49,6 +50,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     address: initialData?.address || "",
   })
   const isMobile = isMobileDevice()
+  const { addNotification } = useNotifications()
 
   // Reset form data if initialData changes
   useEffect(() => {
@@ -103,7 +105,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
 
       if (result.success) {
         setProfileImage(result.url || null)
-        toast({
+        addNotification({
           title: "Image Uploaded",
           description: "Your profile image has been updated successfully.",
         })
@@ -116,7 +118,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         // Log error details
         console.error("[Client] Upload failed:", result)
 
-        toast({
+        addNotification({
           title: "Upload Failed",
           description: result.error || "Failed to upload image. Please try again.",
           variant: "destructive",
@@ -126,7 +128,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       console.error("[Client] Exception during upload:", error)
 
       setUploadError(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.")
-      toast({
+      addNotification({
         title: "Error",
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
         variant: "destructive",
@@ -136,7 +138,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.Event) => {
     e.preventDefault()
     setIsSubmitting(true)
     setSuccess(false)
@@ -165,7 +167,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
 
       if (result.success) {
         setSuccess(true)
-        toast({
+        addNotification({
           title: "Profile Updated",
           description: "Your profile information has been updated successfully.",
         })
@@ -178,8 +180,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         setError(result.error || "Failed to update profile. Please try again.")
         setErrorDetails(result.errorDetails || null)
 
-        // Show toast with error message
-        toast({
+        addNotification({
           title: "Update Failed",
           description: result.error || "Failed to update profile. Please try again.",
           variant: "destructive",
@@ -208,8 +209,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       // Set error state for UI display
       setError(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.")
 
-      // Show toast with error message
-      toast({
+      addNotification({
         title: "Error",
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
         variant: "destructive",
@@ -234,61 +234,63 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
           <CardDescription>Update your personal details</CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error updating profile</AlertTitle>
-              <AlertDescription>
-                <div className="space-y-2">
-                  <p>{error}</p>
-                  {errorDetails && (
-                    <details className="text-xs">
-                      <summary className="cursor-pointer">Technical details</summary>
-                      <pre className="mt-2 whitespace-pre-wrap bg-destructive/10 p-2 rounded">
-                        {JSON.stringify(errorDetails, null, 2)}
-                      </pre>
-                    </details>
-                  )}
-                  <Button variant="outline" size="sm" onClick={handleRetry} className="mt-2" disabled={isSubmitting}>
-                    <RefreshCw className="mr-2 h-3 w-3" />
-                    Retry
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
+          {/* {error && (
+           <Alert variant="destructive" className="mb-6">
+             <AlertCircle className="h-4 w-4" />
+             <AlertTitle>Error updating profile</AlertTitle>
+             <AlertDescription>
+               <div className="space-y-2">
+                 <p>{error}</p>
+                 {errorDetails && (
+                   <details className="text-xs">
+                     <summary className="cursor-pointer">Technical details</summary>
+                     <pre className="mt-2 whitespace-pre-wrap bg-destructive/10 p-2 rounded">
+                       {JSON.stringify(errorDetails, null, 2)}
+                     </pre>
+                   </details>
+                 )}
+                 <Button variant="outline" size="sm" onClick={handleRetry} className="mt-2" disabled={isSubmitting}>
+                   <RefreshCw className="mr-2 h-3 w-3" />
+                   Retry
+                 </Button>
+               </div>
+             </AlertDescription>
+           </Alert>
+         )}
 
-          {success && (
-            <Alert className="mb-6 border-green-500 bg-green-50 text-green-800">
-              <Check className="h-4 w-4" />
-              <AlertTitle>Success</AlertTitle>
-              <AlertDescription>Your profile has been updated successfully.</AlertDescription>
-            </Alert>
-          )}
+         {success && (
+           <Alert className="mb-6 border-green-500 bg-green-50 text-green-800">
+             <Check className="h-4 w-4" />
+             <AlertTitle>Success</AlertTitle>
+             <AlertDescription>Your profile has been updated successfully.</AlertDescription>
+           </Alert>
+         )} */}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  name="fullName"
-                  placeholder="Enter your full name"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                />
-              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    name="fullName"
+                    placeholder="Enter your full name"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={formData.email}
-                  onChange={handleChange}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -351,18 +353,6 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
             isUploading={isUploading}
             uploadError={uploadError}
           />
-          {uploadError && isMobile && (
-            <div className="text-xs text-center mt-2">
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0 text-xs"
-                onClick={() => (window.location.href = "/dashboard/profile/troubleshoot")}
-              >
-                Having trouble? Try our troubleshooter
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
