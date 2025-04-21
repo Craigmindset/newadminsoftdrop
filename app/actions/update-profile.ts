@@ -1,6 +1,6 @@
 "use server"
 
-import { getSupabaseServer } from "@/lib/supabase-server"
+import { createClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 
@@ -8,6 +8,23 @@ export type ProfileFormData = {
   fullName?: string
   email?: string
   address?: string
+}
+
+// Create a Supabase client with the service role key to bypass RLS
+function getServiceSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error("Missing Supabase URL or service role key")
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
 }
 
 export async function updateSenderProfile(formData: ProfileFormData) {
@@ -26,11 +43,21 @@ export async function updateSenderProfile(formData: ProfileFormData) {
       return { success: false, error: "User ID not found" }
     }
 
-    // Get Supabase client
-    const supabase = getSupabaseServer()
+    // Get Supabase client with service role key to bypass RLS
+    const supabase = getServiceSupabase()
 
     // Check if profile exists
-    const { data: existingProfile } = await supabase.from("sender_profiles").select("*").eq("user_id", userId).single()
+    const { data: existingProfile, error: fetchError } = await supabase
+      .from("sender_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .single()
+
+    if (fetchError && fetchError.code !== "PGRST116") {
+      // PGRST116 is "no rows returned" error
+      console.error("Error fetching profile:", fetchError)
+      return { success: false, error: fetchError.message }
+    }
 
     if (existingProfile) {
       // Update existing profile
@@ -94,13 +121,13 @@ export async function getSenderProfile() {
       return null
     }
 
-    // Get Supabase client
-    const supabase = getSupabaseServer()
+    // Get Supabase client with service role key to bypass RLS
+    const supabase = getServiceSupabase()
 
     // Get profile data
     const { data, error } = await supabase.from("sender_profiles").select("*").eq("user_id", userId).single()
 
-    if (error) {
+    if (error && error.code !== "PGRST116") {
       console.error("Error fetching profile:", error)
       return null
     }
