@@ -87,6 +87,10 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     fileInputRef.current?.click()
   }
 
+  const setImagePreview = (url: string) => {
+    setProfileImagePreview(url)
+  }
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
@@ -112,7 +116,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       }
 
       setProfileImage(file)
-      setProfileImagePreview(URL.createObjectURL(file))
+      setImagePreview(URL.createObjectURL(file))
 
       // Clear success and error states when form is modified
       if (success) setSuccess(false)
