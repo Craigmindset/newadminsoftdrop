@@ -18,8 +18,17 @@ export async function uploadProfileImage(imageFile: File) {
       return { success: false, error: "User ID not found" }
     }
 
-    // Use admin client to bypass RLS
-    const supabase = getSupabaseAdmin()
+    // Try to use admin client to bypass RLS
+    let supabase
+    try {
+      supabase = getSupabaseAdmin()
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          "Missing Supabase admin credentials. Please set SUPABASE_SERVICE_ROLE_KEY in your environment variables.",
+      }
+    }
 
     // Use the known bucket name
     const bucketName = "profile_images"
@@ -44,6 +53,15 @@ export async function uploadProfileImage(imageFile: File) {
         return {
           success: false,
           error: "Storage bucket not found. Please create a 'profile_images' bucket in your Supabase storage.",
+        }
+      }
+
+      // Check if this is an RLS error
+      if (uploadError.message.includes("row-level security") || uploadError.message.includes("policy")) {
+        return {
+          success: false,
+          error: "Permission denied: Unable to upload file due to security policies.",
+          details: uploadError.message,
         }
       }
 
@@ -76,8 +94,17 @@ export async function deleteProfileImage(filePath: string) {
       return { success: false, error: "Not authenticated" }
     }
 
-    // Use admin client to bypass RLS
-    const supabase = getSupabaseAdmin()
+    // Try to use admin client to bypass RLS
+    let supabase
+    try {
+      supabase = getSupabaseAdmin()
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          "Missing Supabase admin credentials. Please set SUPABASE_SERVICE_ROLE_KEY in your environment variables.",
+      }
+    }
 
     // Use the known bucket name
     const bucketName = "profile_images"
