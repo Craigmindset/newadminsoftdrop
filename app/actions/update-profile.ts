@@ -35,8 +35,27 @@ export async function updateSenderProfile(formData: FormData) {
     const profileImage = formData.get("profileImage") as File | null
     const removeProfileImage = formData.get("removeProfileImage") === "true"
 
-    // Get the regular user client
-    const supabase = getSupabaseServer()
+    // Try to get admin client, but have a fallback
+    let supabase
+    let isUsingAdminClient = false
+    try {
+      supabase = getSupabaseAdmin()
+
+      // Test if we actually have admin access by checking if we can bypass RLS
+      const { data: testData, error: testError } = await supabase.rpc("check_service_role")
+
+      if (testError || !testData) {
+        console.warn("Service role check failed, falling back to regular client:", testError)
+        supabase = getSupabaseServer()
+        isUsingAdminClient = false
+      } else {
+        isUsingAdminClient = true
+      }
+    } catch (error) {
+      console.warn("Failed to get admin client, falling back to regular client:", error)
+      supabase = getSupabaseServer()
+      isUsingAdminClient = false
+    }
 
     // Check if profile exists
     const { data: existingProfile, error: fetchError } = await supabase
@@ -55,7 +74,7 @@ export async function updateSenderProfile(formData: FormData) {
     let profile_image_url = existingProfile?.profile_image_url || null
     let imageUploadError = null
 
-    if (profileImage) {
+    if (profileImage && isUsingAdminClient) {
       try {
         // If there was a previous image, try to delete it
         if (existingProfile?.profile_image_url) {
@@ -88,7 +107,9 @@ export async function updateSenderProfile(formData: FormData) {
         imageUploadError = "Failed to process profile image. Please try again."
         // Continue with profile update even if image upload fails
       }
-    } else if (removeProfileImage) {
+    } else if (profileImage && !isUsingAdminClient) {
+      imageUploadError = "Profile image upload requires admin credentials. Please contact the administrator."
+    } else if (removeProfileImage && isUsingAdminClient) {
       // If the user wants to remove their profile image
       if (existingProfile?.profile_image_url) {
         try {
@@ -113,22 +134,51 @@ export async function updateSenderProfile(formData: FormData) {
       email: email,
       address: address,
       updated_at: new Date().toISOString(),
-      profile_image_url: profile_image_url,
+    }
+
+    // Only include profile_image_url if we're using admin client or not changing it
+    if (isUsingAdminClient || (!profileImage && !removeProfileImage)) {
+      profileData["profile_image_url"] = profile_image_url
     }
 
     let result
 
-    if (existingProfile) {
-      // Update existing profile
-      result = await supabase.from("sender_profiles").update(profileData).eq("user_id", userId)
+    // If we're not using admin client, try to use RPC function instead
+    // This is more likely to work with RLS policies
+    if (!isUsingAdminClient) {
+      try {
+        result = await supabase.rpc("update_sender_profile", {
+          p_user_id: userId,
+          p_full_name: fullName,
+          p_email: email,
+          p_address: address,
+        })
+
+        if (result.error) {
+          console.error("Error updating profile via RPC:", result.error)
+
+          // Fall back to direct update as a last resort
+          result = await supabase.from("sender_profiles").update(profileData).eq("user_id", userId)
+        }
+      } catch (rpcError) {
+        console.error("RPC function not available, falling back to direct update:", rpcError)
+        result = await supabase.from("sender_profiles").update(profileData).eq("user_id", userId)
+      }
     } else {
-      // Create new profile
-      result = await supabase.from("sender_profiles").insert({
-        ...profileData,
-        user_id: userId,
-        phone_number: phoneNumber,
-        created_at: new Date().toISOString(),
-      })
+      // With admin client, we can directly update
+      if (existingProfile) {
+        // Update existing profile
+        result = await supabase.from("sender_profiles").update(profileData).eq("user_id", userId)
+      } else {
+        // Create new profile
+        result = await supabase.from("sender_profiles").insert({
+          ...profileData,
+          user_id: userId,
+          phone_number: phoneNumber,
+          created_at: new Date().toISOString(),
+          profile_image_url: profile_image_url,
+        })
+      }
     }
 
     if (result.error) {
@@ -136,35 +186,36 @@ export async function updateSenderProfile(formData: FormData) {
 
       // Check if this is an RLS error
       if (result.error.message.includes("row-level security") || result.error.message.includes("policy")) {
-        // Try with admin client as fallback
+        // Last resort: try to use a direct SQL query with service role
         try {
           const adminClient = getSupabaseAdmin()
 
-          if (existingProfile) {
-            result = await adminClient.from("sender_profiles").update(profileData).eq("user_id", userId)
-          } else {
-            result = await adminClient.from("sender_profiles").insert({
-              ...profileData,
-              user_id: userId,
-              phone_number: phoneNumber,
-              created_at: new Date().toISOString(),
-            })
-          }
+          // Use a direct SQL query to update the profile
+          // This bypasses RLS completely
+          const { error: sqlError } = await adminClient.rpc("admin_update_sender_profile", {
+            p_user_id: userId,
+            p_full_name: fullName,
+            p_email: email,
+            p_address: address,
+          })
 
-          if (result.error) {
-            console.error("Admin update also failed:", result.error)
+          if (sqlError) {
+            console.error("Error with admin update:", sqlError)
             return {
               success: false,
               error: "Permission denied: Unable to update profile due to security policies.",
-              details: "This may be resolved by setting up proper RLS policies or SUPABASE_SERVICE_ROLE_KEY.",
+              details:
+                "This may be resolved by setting up the SUPABASE_SERVICE_ROLE_KEY environment variable correctly.",
             }
           }
-        } catch (adminError) {
-          console.error("Admin client failed:", adminError)
+
+          // If we got here, the update was successful
+        } catch (sqlError) {
+          console.error("Error with admin SQL update:", sqlError)
           return {
             success: false,
             error: "Permission denied: Unable to update profile due to security policies.",
-            details: "This may be resolved by setting up proper RLS policies or SUPABASE_SERVICE_ROLE_KEY.",
+            details: "This may be resolved by setting up the SUPABASE_SERVICE_ROLE_KEY environment variable correctly.",
           }
         }
       } else {
@@ -209,34 +260,29 @@ export async function getSenderProfile() {
       return null
     }
 
-    // Use regular client first
-    const supabase = getSupabaseServer()
+    // Try to get admin client, but have a fallback
+    let supabase
+    try {
+      supabase = getSupabaseAdmin()
+
+      // Test if we actually have admin access
+      const { data: testData, error: testError } = await supabase.rpc("check_service_role")
+
+      if (testError || !testData) {
+        console.warn("Service role check failed, falling back to regular client:", testError)
+        supabase = getSupabaseServer()
+      }
+    } catch (error) {
+      console.warn("Failed to get admin client, falling back to regular client:", error)
+      supabase = getSupabaseServer()
+    }
 
     // Get profile data
     const { data, error } = await supabase.from("sender_profiles").select("*").eq("user_id", userId).single()
 
     if (error && error.code !== "PGRST116") {
       console.error("Error fetching profile:", error)
-
-      // Try with admin client as fallback
-      try {
-        const adminClient = getSupabaseAdmin()
-        const { data: adminData, error: adminError } = await adminClient
-          .from("sender_profiles")
-          .select("*")
-          .eq("user_id", userId)
-          .single()
-
-        if (adminError) {
-          console.error("Admin fetch also failed:", adminError)
-          return null
-        }
-
-        return adminData
-      } catch (adminError) {
-        console.error("Admin client failed for fetch:", adminError)
-        return null
-      }
+      return null
     }
 
     return data

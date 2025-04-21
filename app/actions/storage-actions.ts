@@ -1,7 +1,6 @@
 "use server"
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
-import { getSupabaseServer } from "@/lib/supabase-server"
 import { cookies } from "next/headers"
 
 export async function uploadProfileImage(imageFile: File) {
@@ -19,60 +18,54 @@ export async function uploadProfileImage(imageFile: File) {
       return { success: false, error: "User ID not found" }
     }
 
-    // First try with regular user authentication
-    // This will work if proper storage policies are set up
-    let supabase = getSupabaseServer()
+    // Try to use admin client to bypass RLS
+    let supabase
+    try {
+      supabase = getSupabaseAdmin()
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          "Missing Supabase admin credentials. Please set SUPABASE_SERVICE_ROLE_KEY in your environment variables.",
+      }
+    }
 
     // Use the known bucket name
     const bucketName = "profile_images"
 
-    // Generate a unique filename with user-specific path
+    // Generate a unique filename
     const fileExt = imageFile.name.split(".").pop()
-    const fileName = `${userId}/${Date.now()}.${fileExt}`
+    const fileName = `profile-${userId}-${Date.now()}.${fileExt}`
 
-    // Try to upload with regular user authentication first
-    let { data: uploadData, error: uploadError } = await supabase.storage.from(bucketName).upload(fileName, imageFile, {
-      cacheControl: "3600",
-      upsert: true,
-    })
+    // Upload the image to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(fileName, imageFile, {
+        cacheControl: "3600",
+        upsert: true,
+      })
 
-    // If regular upload fails, try with admin client as fallback
     if (uploadError) {
-      console.log("Regular user upload failed, trying with admin client:", uploadError)
+      console.error("Error uploading profile image:", uploadError)
 
-      try {
-        supabase = getSupabaseAdmin()
-
-        // Try upload with admin client
-        const adminUploadResult = await supabase.storage.from(bucketName).upload(fileName, imageFile, {
-          cacheControl: "3600",
-          upsert: true,
-        })
-
-        uploadData = adminUploadResult.data
-        uploadError = adminUploadResult.error
-
-        if (uploadError) {
-          console.error("Admin upload also failed:", uploadError)
-
-          // Check if bucket doesn't exist
-          if (uploadError.message.includes("bucket") && uploadError.message.includes("not found")) {
-            return {
-              success: false,
-              error: "Storage bucket not found. Please create a 'profile_images' bucket in your Supabase storage.",
-            }
-          }
-
-          return { success: false, error: "Failed to upload profile image. Please try again." }
-        }
-      } catch (adminError) {
-        console.error("Admin client failed:", adminError)
+      // Check if bucket doesn't exist
+      if (uploadError.message.includes("bucket") && uploadError.message.includes("not found")) {
         return {
           success: false,
-          error: "Profile image upload failed. Please try again later.",
-          details: "Storage permissions are not properly configured.",
+          error: "Storage bucket not found. Please create a 'profile_images' bucket in your Supabase storage.",
         }
       }
+
+      // Check if this is an RLS error
+      if (uploadError.message.includes("row-level security") || uploadError.message.includes("policy")) {
+        return {
+          success: false,
+          error: "Permission denied: Unable to upload file due to security policies.",
+          details: uploadError.message,
+        }
+      }
+
+      return { success: false, error: "Failed to upload profile image. Please try again." }
     }
 
     // Get the public URL for the uploaded image
@@ -101,53 +94,27 @@ export async function deleteProfileImage(filePath: string) {
       return { success: false, error: "Not authenticated" }
     }
 
-    const session = JSON.parse(sessionCookie.value)
-    const userId = session.userId
-
-    if (!userId) {
-      return { success: false, error: "User ID not found" }
+    // Try to use admin client to bypass RLS
+    let supabase
+    try {
+      supabase = getSupabaseAdmin()
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          "Missing Supabase admin credentials. Please set SUPABASE_SERVICE_ROLE_KEY in your environment variables.",
+      }
     }
-
-    // First try with regular user authentication
-    let supabase = getSupabaseServer()
 
     // Use the known bucket name
     const bucketName = "profile_images"
-
-    // Check if the file belongs to the user
-    // This is important for security - users should only delete their own files
-    if (!filePath.startsWith(`${userId}/`)) {
-      // If the path doesn't start with the user ID, it might be an old format
-      // In this case, we'll need admin privileges to delete it
-      try {
-        supabase = getSupabaseAdmin()
-      } catch (error) {
-        return {
-          success: false,
-          error: "You don't have permission to delete this image.",
-        }
-      }
-    }
 
     // Delete the file
     const { error } = await supabase.storage.from(bucketName).remove([filePath])
 
     if (error) {
       console.error("Error deleting profile image:", error)
-
-      // Try with admin client as fallback
-      try {
-        supabase = getSupabaseAdmin()
-        const { error: adminError } = await supabase.storage.from(bucketName).remove([filePath])
-
-        if (adminError) {
-          console.error("Admin delete also failed:", adminError)
-          return { success: false, error: "Failed to delete profile image." }
-        }
-      } catch (adminError) {
-        console.error("Admin client failed for deletion:", adminError)
-        return { success: false, error: "Failed to delete profile image." }
-      }
+      return { success: false, error: "Failed to delete profile image." }
     }
 
     return { success: true }
