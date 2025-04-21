@@ -136,7 +136,7 @@ export default function SendItemPage() {
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="intercity" id="intercity" />
                     <Label htmlFor="intercity" className="font-normal">
-                      Intercity
+                      Intracity
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
