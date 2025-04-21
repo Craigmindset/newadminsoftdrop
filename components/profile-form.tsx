@@ -37,6 +37,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [warning, setWarning] = useState<string | null>(null)
   const [profileImage, setProfileImage] = useState<File | null>(null)
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(initialData?.profile_image_url || null)
   const [isUploading, setIsUploading] = useState(false)
@@ -70,6 +71,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     // Clear success and error states when form is modified
     if (success) setSuccess(false)
     if (error) setError(null)
+    if (warning) setWarning(null)
   }
 
   const handleImageClick = () => {
@@ -114,6 +116,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       // Clear success and error states when form is modified
       if (success) setSuccess(false)
       if (error) setError(null)
+      if (warning) setWarning(null)
     }
   }
 
@@ -128,6 +131,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     // Clear success and error states when form is modified
     if (success) setSuccess(false)
     if (error) setError(null)
+    if (warning) setWarning(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -135,6 +139,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     setIsSubmitting(true)
     setSuccess(false)
     setError(null)
+    setWarning(null)
 
     try {
       // Basic validation
@@ -162,10 +167,22 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
 
       if (result.success) {
         setSuccess(true)
-        toast({
-          title: "Profile Updated",
-          description: "Your profile information has been updated successfully.",
-        })
+
+        // Check if there was a warning about image upload
+        if (result.warning) {
+          setWarning(result.error || "Profile image couldn't be uploaded")
+          setStorageError(true)
+
+          toast({
+            title: "Profile Partially Updated",
+            description: "Your profile information was updated, but we couldn't upload your profile image.",
+          })
+        } else {
+          toast({
+            title: "Profile Updated",
+            description: "Your profile information has been updated successfully.",
+          })
+        }
 
         // Refresh the page to show updated data
         router.refresh()
@@ -173,15 +190,25 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         setError(result.error || "Failed to update profile. Please try again.")
 
         // Check if the error is related to storage
-        if (result.error?.includes("Storage") || result.error?.includes("bucket")) {
+        if (
+          result.error?.includes("Storage") ||
+          result.error?.includes("bucket") ||
+          result.error?.includes("row-level security") ||
+          result.error?.includes("Permission denied")
+        ) {
           setStorageError(true)
+          toast({
+            title: "Update Failed",
+            description: "We couldn't update your profile due to permission issues.",
+            variant: "destructive",
+          })
+        } else {
+          toast({
+            title: "Update Failed",
+            description: result.error || "Please try again.",
+            variant: "destructive",
+          })
         }
-
-        toast({
-          title: "Update Failed",
-          description: result.error || "Please try again.",
-          variant: "destructive",
-        })
       }
     } catch (error) {
       console.error("Profile update error:", error)
@@ -210,7 +237,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       formData.email !== (initialData?.email || "") ||
       formData.address !== (initialData?.address || "") ||
       profileImage !== null ||
-      (profileImagePreview === null && initialData?.profile_image_url !== null)
+      (profileImagePreview !== null && profileImagePreview !== initialData?.profile_image_url)
     )
   }
 
@@ -245,6 +272,17 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
                   </p>
                 </div>
               )}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {warning && !error && (
+          <Alert className="mb-6 border-amber-500 bg-amber-500/10">
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+            <AlertDescription>
+              <AlertTitle>Profile Partially Updated</AlertTitle>
+              <p>Your profile information was updated, but we couldn't upload your profile image.</p>
+              <p className="text-sm mt-1">{warning}</p>
             </AlertDescription>
           </Alert>
         )}

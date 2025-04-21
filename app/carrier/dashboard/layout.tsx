@@ -1,9 +1,22 @@
 import type { ReactNode } from "react"
 import { CarrierSidebar } from "@/components/carrier-sidebar"
 import { CarrierHeader } from "@/components/carrier-header"
+import { checkCarrierSession } from "@/app/actions/carrier-auth"
+import { redirect } from "next/navigation"
 import { Toaster } from "@/components/ui/toaster"
 
-export default function CarrierDashboardLayout({ children }: { children: ReactNode }) {
+export default async function CarrierDashboardLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
+  // Check if the carrier is authenticated
+  const session = await checkCarrierSession()
+
+  if (!session) {
+    redirect("/login/carrier")
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <CarrierHeader />

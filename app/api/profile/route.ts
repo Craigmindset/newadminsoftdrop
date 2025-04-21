@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { getSupabaseServer } from "@/lib/supabase-server"
+import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 export async function GET() {
   try {
@@ -17,8 +17,8 @@ export async function GET() {
       return NextResponse.json({ error: "User ID not found" }, { status: 401 })
     }
 
-    // Get Supabase client
-    const supabase = getSupabaseServer()
+    // Get Supabase admin client
+    const supabase = getSupabaseAdmin()
 
     // Get profile data
     const { data, error } = await supabase.from("sender_profiles").select("*").eq("user_id", userId).single()

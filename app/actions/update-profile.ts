@@ -1,8 +1,9 @@
 "use server"
 
-import { getSupabaseServer } from "@/lib/supabase-server"
+import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
+import { uploadProfileImage, deleteProfileImage } from "./storage-actions"
 
 export type ProfileFormData = {
   fullName?: string
@@ -33,8 +34,8 @@ export async function updateSenderProfile(formData: FormData) {
     const profileImage = formData.get("profileImage") as File | null
     const removeProfileImage = formData.get("removeProfileImage") === "true"
 
-    // Get Supabase client
-    const supabase = getSupabaseServer()
+    // Get Supabase admin client to bypass RLS
+    const supabase = getSupabaseAdmin()
 
     // Check if profile exists
     const { data: existingProfile, error: fetchError } = await supabase
@@ -51,17 +52,10 @@ export async function updateSenderProfile(formData: FormData) {
 
     // Handle profile image upload if provided
     let profile_image_url = existingProfile?.profile_image_url || null
+    let imageUploadError = null
 
     if (profileImage) {
       try {
-        // Use the known bucket name directly
-        const bucketName = "profile_images"
-        console.log(`Using bucket: ${bucketName}`)
-
-        // Generate a unique filename
-        const fileExt = profileImage.name.split(".").pop()
-        const fileName = `profile-${userId}-${Date.now()}.${fileExt}`
-
         // If there was a previous image, try to delete it
         if (existingProfile?.profile_image_url) {
           try {
@@ -70,7 +64,7 @@ export async function updateSenderProfile(formData: FormData) {
             const oldPath = oldUrl.pathname.split("/").pop()
 
             if (oldPath) {
-              await supabase.storage.from(bucketName).remove([oldPath])
+              await deleteProfileImage(oldPath)
             }
           } catch (deleteError) {
             console.error("Error deleting old profile image:", deleteError)
@@ -78,29 +72,37 @@ export async function updateSenderProfile(formData: FormData) {
           }
         }
 
-        // Upload the image to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(fileName, profileImage, {
-            cacheControl: "3600",
-            upsert: true,
-          })
+        // Upload the new image using our dedicated function
+        const uploadResult = await uploadProfileImage(profileImage)
 
-        if (uploadError) {
-          console.error("Error uploading profile image:", uploadError)
-          return { success: false, error: "Failed to upload profile image. Please try again." }
+        if (!uploadResult.success) {
+          imageUploadError = uploadResult.error
+          console.error("Image upload failed but continuing with profile update:", uploadResult.error)
+          // Continue with profile update even if image upload fails
+        } else {
+          profile_image_url = uploadResult.url
         }
-
-        // Get the public URL for the uploaded image
-        const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(fileName)
-
-        profile_image_url = urlData.publicUrl
       } catch (uploadError) {
         console.error("Error handling profile image:", uploadError)
-        return { success: false, error: "Failed to process profile image. Please try again." }
+        imageUploadError = "Failed to process profile image. Please try again."
+        // Continue with profile update even if image upload fails
       }
     } else if (removeProfileImage) {
       // If the user wants to remove their profile image
+      if (existingProfile?.profile_image_url) {
+        try {
+          // Extract the filename from the URL
+          const oldUrl = new URL(existingProfile.profile_image_url)
+          const oldPath = oldUrl.pathname.split("/").pop()
+
+          if (oldPath) {
+            await deleteProfileImage(oldPath)
+          }
+        } catch (deleteError) {
+          console.error("Error deleting profile image:", deleteError)
+          // Continue even if delete fails
+        }
+      }
       profile_image_url = null
     }
 
@@ -136,6 +138,15 @@ export async function updateSenderProfile(formData: FormData) {
     // Revalidate the profile page to show updated data
     revalidatePath("/dashboard/profile")
 
+    // Return success but include image error if there was one
+    if (imageUploadError) {
+      return {
+        success: true,
+        warning: "Profile updated but image upload failed",
+        error: imageUploadError,
+      }
+    }
+
     return { success: true }
   } catch (error) {
     console.error("Profile update error:", error)
@@ -147,7 +158,6 @@ export async function updateSenderProfile(formData: FormData) {
 }
 
 export async function getSenderProfile() {
-  // This function remains unchanged
   try {
     // Get the session from cookies
     const sessionCookie = cookies().get("sb-session")
@@ -162,8 +172,8 @@ export async function getSenderProfile() {
       return null
     }
 
-    // Get Supabase client
-    const supabase = getSupabaseServer()
+    // Use admin client to bypass RLS
+    const supabase = getSupabaseAdmin()
 
     // Get profile data
     const { data, error } = await supabase.from("sender_profiles").select("*").eq("user_id", userId).single()
