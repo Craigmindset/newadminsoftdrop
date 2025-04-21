@@ -37,9 +37,20 @@ export async function updateSenderProfile(formData: FormData) {
 
     // Try to get admin client, but have a fallback
     let supabase
-    let isUsingAdminClient = true
+    let isUsingAdminClient = false
     try {
       supabase = getSupabaseAdmin()
+
+      // Test if we actually have admin access by checking if we can bypass RLS
+      const { data: testData, error: testError } = await supabase.rpc("check_service_role")
+
+      if (testError || !testData) {
+        console.warn("Service role check failed, falling back to regular client:", testError)
+        supabase = getSupabaseServer()
+        isUsingAdminClient = false
+      } else {
+        isUsingAdminClient = true
+      }
     } catch (error) {
       console.warn("Failed to get admin client, falling back to regular client:", error)
       supabase = getSupabaseServer()
@@ -132,18 +143,42 @@ export async function updateSenderProfile(formData: FormData) {
 
     let result
 
-    if (existingProfile) {
-      // Update existing profile
-      result = await supabase.from("sender_profiles").update(profileData).eq("user_id", userId)
+    // If we're not using admin client, try to use RPC function instead
+    // This is more likely to work with RLS policies
+    if (!isUsingAdminClient) {
+      try {
+        result = await supabase.rpc("update_sender_profile", {
+          p_user_id: userId,
+          p_full_name: fullName,
+          p_email: email,
+          p_address: address,
+        })
+
+        if (result.error) {
+          console.error("Error updating profile via RPC:", result.error)
+
+          // Fall back to direct update as a last resort
+          result = await supabase.from("sender_profiles").update(profileData).eq("user_id", userId)
+        }
+      } catch (rpcError) {
+        console.error("RPC function not available, falling back to direct update:", rpcError)
+        result = await supabase.from("sender_profiles").update(profileData).eq("user_id", userId)
+      }
     } else {
-      // Create new profile
-      result = await supabase.from("sender_profiles").insert({
-        ...profileData,
-        user_id: userId,
-        phone_number: phoneNumber,
-        created_at: new Date().toISOString(),
-        profile_image_url: profile_image_url,
-      })
+      // With admin client, we can directly update
+      if (existingProfile) {
+        // Update existing profile
+        result = await supabase.from("sender_profiles").update(profileData).eq("user_id", userId)
+      } else {
+        // Create new profile
+        result = await supabase.from("sender_profiles").insert({
+          ...profileData,
+          user_id: userId,
+          phone_number: phoneNumber,
+          created_at: new Date().toISOString(),
+          profile_image_url: profile_image_url,
+        })
+      }
     }
 
     if (result.error) {
@@ -151,14 +186,41 @@ export async function updateSenderProfile(formData: FormData) {
 
       // Check if this is an RLS error
       if (result.error.message.includes("row-level security") || result.error.message.includes("policy")) {
-        return {
-          success: false,
-          error: "Permission denied: Unable to update profile due to security policies.",
-          details: "This may be resolved by setting up the SUPABASE_SERVICE_ROLE_KEY environment variable.",
-        }
-      }
+        // Last resort: try to use a direct SQL query with service role
+        try {
+          const adminClient = getSupabaseAdmin()
 
-      return { success: false, error: result.error.message }
+          // Use a direct SQL query to update the profile
+          // This bypasses RLS completely
+          const { error: sqlError } = await adminClient.rpc("admin_update_sender_profile", {
+            p_user_id: userId,
+            p_full_name: fullName,
+            p_email: email,
+            p_address: address,
+          })
+
+          if (sqlError) {
+            console.error("Error with admin update:", sqlError)
+            return {
+              success: false,
+              error: "Permission denied: Unable to update profile due to security policies.",
+              details:
+                "This may be resolved by setting up the SUPABASE_SERVICE_ROLE_KEY environment variable correctly.",
+            }
+          }
+
+          // If we got here, the update was successful
+        } catch (sqlError) {
+          console.error("Error with admin SQL update:", sqlError)
+          return {
+            success: false,
+            error: "Permission denied: Unable to update profile due to security policies.",
+            details: "This may be resolved by setting up the SUPABASE_SERVICE_ROLE_KEY environment variable correctly.",
+          }
+        }
+      } else {
+        return { success: false, error: result.error.message }
+      }
     }
 
     // Revalidate the profile page to show updated data
@@ -202,6 +264,14 @@ export async function getSenderProfile() {
     let supabase
     try {
       supabase = getSupabaseAdmin()
+
+      // Test if we actually have admin access
+      const { data: testData, error: testError } = await supabase.rpc("check_service_role")
+
+      if (testError || !testData) {
+        console.warn("Service role check failed, falling back to regular client:", testError)
+        supabase = getSupabaseServer()
+      }
     } catch (error) {
       console.warn("Failed to get admin client, falling back to regular client:", error)
       supabase = getSupabaseServer()
