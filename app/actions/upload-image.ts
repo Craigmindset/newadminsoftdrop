@@ -49,9 +49,19 @@ export type UploadResult = {
   url?: string
   error?: string
   errorCode?: string
+  details?: {
+    originalSize?: number
+    processedSize?: number
+    wasProcessed?: boolean
+    processingDetails?: string[]
+    mimeType?: string
+    fileName?: string
+    uploadTime?: number
+  }
 }
 
 export async function uploadProfileImage(formData: FormData): Promise<UploadResult> {
+  const startTime = Date.now()
   try {
     // Get the session from cookies
     const sessionCookie = cookies().get("sb-session")
@@ -93,12 +103,20 @@ export async function uploadProfileImage(formData: FormData): Promise<UploadResu
       }
     }
 
+    // Log file details for debugging
+    console.log(`[Upload] File received: ${file.name}, type: ${file.type}, size: ${file.size} bytes`)
+
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return {
         success: false,
         error: `File size exceeds the maximum limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB`,
         errorCode: "UPLOAD_FILE_TOO_LARGE",
+        details: {
+          originalSize: file.size,
+          mimeType: file.type,
+          fileName: file.name,
+        },
       }
     }
 
@@ -108,36 +126,64 @@ export async function uploadProfileImage(formData: FormData): Promise<UploadResu
         success: false,
         error: `File type not allowed. Allowed types: ${ALLOWED_FILE_TYPES.join(", ")}`,
         errorCode: "UPLOAD_INVALID_FILE_TYPE",
+        details: {
+          mimeType: file.type,
+          fileName: file.name,
+        },
       }
     }
 
     // Get file buffer
-    const buffer = await file.arrayBuffer()
+    let buffer: ArrayBuffer
+    try {
+      buffer = await file.arrayBuffer()
+      console.log(`[Upload] Successfully read file buffer of ${buffer.byteLength} bytes`)
+    } catch (error) {
+      console.error("[Upload] Error reading file buffer:", error)
+      return {
+        success: false,
+        error: `Failed to read file data: ${error instanceof Error ? error.message : String(error)}`,
+        errorCode: "UPLOAD_READ_ERROR",
+        details: {
+          mimeType: file.type,
+          fileName: file.name,
+        },
+      }
+    }
 
     // Initialize Supabase client
     const supabase = getServiceSupabase()
 
     // Generate a unique filename
-    const fileExt = file.name.split(".").pop()
+    const fileExt = file.name.split(".").pop() || "jpg"
     const fileName = `${userId}/${uuidv4()}.${fileExt}`
 
     // Upload file to Supabase Storage
+    console.log(`[Upload] Attempting to upload file to Supabase Storage: ${fileName}`)
     const { data, error } = await supabase.storage.from("profile_images").upload(fileName, buffer, {
       contentType: file.type,
       upsert: true,
     })
 
     if (error) {
-      console.error("Error uploading file:", error)
+      console.error("[Upload] Error uploading file to Supabase:", error)
       return {
         success: false,
         error: `Failed to upload image: ${error.message}`,
         errorCode: `STORAGE_UPLOAD_ERROR`,
+        details: {
+          originalSize: file.size,
+          mimeType: file.type,
+          fileName: file.name,
+        },
       }
     }
 
+    console.log("[Upload] File uploaded successfully:", data)
+
     // Get the public URL
     const { data: publicUrlData } = supabase.storage.from("profile_images").getPublicUrl(fileName)
+    console.log("[Upload] Public URL generated:", publicUrlData.publicUrl)
 
     // Update the user's profile with the new image URL
     const { error: updateError } = await supabase
@@ -149,24 +195,41 @@ export async function uploadProfileImage(formData: FormData): Promise<UploadResu
       .eq("user_id", userId)
 
     if (updateError) {
-      console.error("Error updating profile with image URL:", updateError)
+      console.error("[Upload] Error updating profile with image URL:", updateError)
       return {
         success: false,
         error: `Failed to update profile with image URL: ${updateError.message}`,
         errorCode: `DB_UPDATE_ERROR`,
+        details: {
+          originalSize: file.size,
+          mimeType: file.type,
+          fileName: file.name,
+        },
       }
     }
+
+    const uploadTime = Date.now() - startTime
+    console.log(`[Upload] Profile updated successfully. Total time: ${uploadTime}ms`)
 
     return {
       success: true,
       url: publicUrlData.publicUrl,
+      details: {
+        originalSize: file.size,
+        mimeType: file.type,
+        fileName: file.name,
+        uploadTime,
+      },
     }
   } catch (error) {
-    console.error("Unhandled exception in uploadProfileImage:", error)
+    console.error("[Upload] Unhandled exception in uploadProfileImage:", error)
     return {
       success: false,
       error: "An unexpected error occurred. Please try again later.",
       errorCode: "UNHANDLED_EXCEPTION",
+      details: {
+        error: error instanceof Error ? error.message : String(error),
+      },
     }
   }
 }

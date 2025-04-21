@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,9 +11,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { updateSenderProfile, type ProfileFormData } from "@/app/actions/update-profile"
 import { uploadProfileImage } from "@/app/actions/upload-image"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Check, AlertCircle, RefreshCw, Camera, Upload, X } from "lucide-react"
+import { Loader2, Check, AlertCircle, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import MobileImageUpload from "./mobile-image-upload"
+import { isMobileDevice } from "@/lib/mobile-image-utils"
 
 type SenderProfile = {
   id?: string
@@ -37,16 +38,17 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [errorDetails, setErrorDetails] = useState<any | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const [profileImage, setProfileImage] = useState<string | null>(initialData?.profile_image_url || null)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [imageFile, setImageFile] = useState<File | Blob | null>(null)
   const [formData, setFormData] = useState<ProfileFormData>({
     fullName: initialData?.full_name || "",
     email: initialData?.email || "",
     address: initialData?.address || "",
   })
+  const isMobile = isMobileDevice()
 
   // Reset form data if initialData changes
   useEffect(() => {
@@ -71,35 +73,31 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     if (error) setError(null)
   }
 
-  const handleImageClick = () => {
-    fileInputRef.current?.click()
+  const handleImageSelect = (file: File | Blob) => {
+    setImageFile(file)
+    setUploadError(null)
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      setImageFile(file)
-      setProfileImage(URL.createObjectURL(file))
-    }
-  }
-
-  const handleRemoveImage = () => {
+  const handleImageRemove = () => {
     setProfileImage(null)
     setImageFile(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
+    setUploadError(null)
   }
 
   const handleImageUpload = async () => {
     if (!imageFile) return
 
     setIsUploading(true)
-    setError(null)
+    setUploadError(null)
 
     try {
       const formData = new FormData()
       formData.append("file", imageFile)
+
+      // Log upload attempt
+      console.log(
+        `[Client] Uploading image: ${imageFile instanceof File ? imageFile.name : "Blob"}, size: ${imageFile.size} bytes, type: ${imageFile.type}`,
+      )
 
       const result = await uploadProfileImage(formData)
 
@@ -109,8 +107,15 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
           title: "Image Uploaded",
           description: "Your profile image has been updated successfully.",
         })
+
+        // Log success details
+        console.log("[Client] Upload successful:", result.details)
       } else {
-        setError(result.error || "Failed to upload image. Please try again.")
+        setUploadError(result.error || "Failed to upload image. Please try again.")
+
+        // Log error details
+        console.error("[Client] Upload failed:", result)
+
         toast({
           title: "Upload Failed",
           description: result.error || "Failed to upload image. Please try again.",
@@ -118,7 +123,9 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         })
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.")
+      console.error("[Client] Exception during upload:", error)
+
+      setUploadError(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.")
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
@@ -140,6 +147,12 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       // Upload image first if there's a new image
       if (imageFile) {
         await handleImageUpload()
+
+        // If there was an error uploading the image, stop the form submission
+        if (uploadError) {
+          setIsSubmitting(false)
+          return
+        }
       }
 
       // Log client-side submission attempt
@@ -302,7 +315,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
             <div className="flex justify-end">
               <Button
                 type="submit"
-                disabled={isSubmitting || (!hasChanges() && !imageFile)}
+                disabled={isSubmitting || isUploading || (!hasChanges() && !imageFile)}
                 className="w-full md:w-auto"
               >
                 {isSubmitting ? (
@@ -330,72 +343,26 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
           <CardDescription>Upload a profile picture</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center space-y-4">
-          <div className="relative cursor-pointer group" onClick={handleImageClick}>
-            <Avatar className="h-32 w-32 border-2 border-muted">
-              <AvatarImage src={profileImage || "/placeholder.svg"} alt="Profile" />
-              <AvatarFallback className="text-4xl">
-                {formData.fullName ? formData.fullName.charAt(0).toUpperCase() : "U"}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-              {isUploading ? (
-                <Loader2 className="h-8 w-8 text-white animate-spin" />
-              ) : (
-                <Camera className="h-8 w-8 text-white" />
-              )}
-            </div>
-
-            {profileImage && (
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleRemoveImage()
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="hidden"
-            onChange={handleImageChange}
+          <MobileImageUpload
+            initialImage={profileImage}
+            userName={formData.fullName}
+            onImageSelect={handleImageSelect}
+            onImageRemove={handleImageRemove}
+            isUploading={isUploading}
+            uploadError={uploadError}
           />
-
-          <Button type="button" variant="outline" onClick={handleImageClick} disabled={isUploading} className="gap-2">
-            {isUploading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Uploading...
-              </>
-            ) : profileImage ? (
-              <>
-                <Camera className="h-4 w-4" />
-                Change Picture
-              </>
-            ) : (
-              <>
-                <Upload className="h-4 w-4" />
-                Upload Picture
-              </>
-            )}
-          </Button>
-
-          <p className="text-xs text-muted-foreground text-center">
-            Recommended: Square image, at least 300x300 pixels.
-            <br />
-            Maximum file size: 5MB.
-            <br />
-            Supported formats: JPEG, PNG, WebP, GIF
-          </p>
+          {uploadError && isMobile && (
+            <div className="text-xs text-center mt-2">
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs"
+                onClick={() => (window.location.href = "/dashboard/profile/troubleshoot")}
+              >
+                Having trouble? Try our troubleshooter
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
