@@ -20,11 +20,14 @@ import { useState } from "react"
 import { logoutSender } from "@/app/actions/sender-auth"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useProfileContext } from "@/context/profile-context"
+import useNotifications from "@/hooks/use-notifications"
+import { Badge } from "@/components/ui/badge"
 
 export function DashboardHeader() {
   const router = useRouter()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const { profile } = useProfileContext()
+  const { unreadCount } = useNotifications()
 
   const closeSheet = () => {
     setIsSheetOpen(false)
@@ -75,9 +78,14 @@ export function DashboardHeader() {
           </Link>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-            <span className="sr-only">Notifications</span>
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/dashboard/notifications">
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <Badge className="absolute top-1 right-1 rounded-full px-2 py-0.5 text-xs">{unreadCount}</Badge>
+              )}
+              <span className="sr-only">Notifications</span>
+            </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
