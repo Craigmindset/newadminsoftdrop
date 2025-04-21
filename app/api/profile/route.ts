@@ -1,6 +1,40 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { getSupabaseServer } from "@/lib/supabase-server"
+import { createClient } from "@supabase/supabase-js"
+
+// Create a Supabase client with the service role key to bypass RLS
+function getServiceSupabase() {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+
+    // Validate URL format
+    if (!supabaseUrl) {
+      throw new Error("NEXT_PUBLIC_SUPABASE_URL is not defined")
+    }
+
+    // Check if URL is valid
+    try {
+      new URL(supabaseUrl)
+    } catch (error) {
+      throw new Error(`Invalid Supabase URL format: ${supabaseUrl}`)
+    }
+
+    if (!supabaseServiceKey) {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY is not defined")
+    }
+
+    return createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
+  } catch (error) {
+    console.error("Failed to initialize Supabase client:", error)
+    throw new Error(`Supabase client initialization failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
 
 export async function GET() {
   try {
@@ -10,15 +44,20 @@ export async function GET() {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    const session = JSON.parse(sessionCookie.value)
-    const userId = session.userId
+    let session
+    try {
+      session = JSON.parse(sessionCookie.value)
+    } catch (error) {
+      return NextResponse.json({ error: "Invalid session format" }, { status: 401 })
+    }
 
+    const userId = session.userId
     if (!userId) {
-      return NextResponse.json({ error: "User ID not found" }, { status: 401 })
+      return NextResponse.json({ error: "User ID not found in session" }, { status: 401 })
     }
 
     // Get Supabase client
-    const supabase = getSupabaseServer()
+    const supabase = getServiceSupabase()
 
     // Get profile data
     const { data, error } = await supabase.from("sender_profiles").select("*").eq("user_id", userId).single()
@@ -30,10 +69,7 @@ export async function GET() {
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error("Profile fetch error:", error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "An unexpected error occurred" },
-      { status: 500 },
-    )
+    console.error("Unhandled exception in profile API:", error)
+    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 })
   }
 }
