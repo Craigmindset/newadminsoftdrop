@@ -7,6 +7,9 @@ import { BookOpen, CreditCard, Home, LogOut, Package, Send, Truck, User } from "
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { useProfileContext } from "@/context/profile-context"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { getInitials } from "@/lib/image-utils"
 
 interface DashboardSidebarProps {
   onMenuItemClick?: () => void
@@ -16,6 +19,7 @@ export function DashboardSidebar({ onMenuItemClick }: DashboardSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const isMobile = useMediaQuery("(max-width: 768px)")
+  const { profile } = useProfileContext()
 
   const routes = [
     {
@@ -69,6 +73,20 @@ export function DashboardSidebar({ onMenuItemClick }: DashboardSidebarProps) {
 
   return (
     <div className="flex h-[100dvh] w-full md:w-64 flex-col border-r bg-background">
+      {/* User profile section */}
+      <div className="p-4 border-b">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={profile?.profile_image_url || ""} alt={profile?.full_name || "User"} />
+            <AvatarFallback>{getInitials(profile?.full_name)}</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <p className="font-medium truncate">{profile?.full_name || "User"}</p>
+            <p className="text-xs text-muted-foreground truncate">{profile?.email || profile?.phone_number}</p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-1 flex-col gap-3 p-6 md:p-4">
         <nav className="grid gap-4 md:gap-3 my-2">
           {routes.map((route) =>
