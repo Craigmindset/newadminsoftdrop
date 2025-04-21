@@ -87,6 +87,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     fileInputRef.current?.click()
   }
 
+  // Update the handleImageChange function to include validation for file size and type
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
@@ -118,6 +119,10 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       if (success) setSuccess(false)
       if (error) setError(null)
       if (warning) setWarning(null)
+
+      // Reset storage error state since we're trying again
+      setStorageError(false)
+      setAdminCredentialsMissing(false)
     }
   }
 
