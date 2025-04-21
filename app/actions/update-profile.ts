@@ -54,40 +54,31 @@ export async function updateSenderProfile(formData: FormData) {
 
     if (profileImage) {
       try {
-        // First, check if the storage bucket exists, if not create it
-        const { data: buckets } = await supabase.storage.listBuckets()
-        const profileBucket = buckets?.find((bucket) => bucket.name === "profile-images")
-
-        if (!profileBucket) {
-          // Create the bucket if it doesn't exist
-          const { error: bucketError } = await supabase.storage.createBucket("profile-images", {
-            public: true,
-            fileSizeLimit: 5242880, // 5MB in bytes
-          })
-
-          if (bucketError) {
-            console.error("Error creating storage bucket:", bucketError)
-            return { success: false, error: "Failed to create storage for profile images" }
-          }
-        }
+        // Use the default "public" bucket instead of creating a new one
+        const bucketName = "public"
 
         // Generate a unique filename
         const fileExt = profileImage.name.split(".").pop()
-        const fileName = `${userId}-${Date.now()}.${fileExt}`
-        const filePath = fileName
+        const fileName = `profile-images/${userId}-${Date.now()}.${fileExt}`
 
         // If there was a previous image, delete it from storage
         if (existingProfile?.profile_image_url) {
-          const oldFilePath = existingProfile.profile_image_url.split("/").pop()
-          if (oldFilePath) {
-            await supabase.storage.from("profile-images").remove([oldFilePath])
+          try {
+            const oldUrl = new URL(existingProfile.profile_image_url)
+            const oldPath = oldUrl.pathname.split("/").slice(-2).join("/")
+            if (oldPath.startsWith("public/")) {
+              await supabase.storage.from(bucketName).remove([oldPath.replace("public/", "")])
+            }
+          } catch (deleteError) {
+            console.error("Error deleting old profile image:", deleteError)
+            // Continue even if delete fails
           }
         }
 
         // Upload the image to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("profile-images")
-          .upload(filePath, profileImage, {
+          .from(bucketName)
+          .upload(fileName, profileImage, {
             cacheControl: "3600",
             upsert: true,
           })
@@ -98,7 +89,7 @@ export async function updateSenderProfile(formData: FormData) {
         }
 
         // Get the public URL for the uploaded image
-        const { data: urlData } = supabase.storage.from("profile-images").getPublicUrl(filePath)
+        const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(fileName)
 
         profile_image_url = urlData.publicUrl
       } catch (uploadError) {
@@ -108,9 +99,15 @@ export async function updateSenderProfile(formData: FormData) {
     } else if (removeProfileImage) {
       // If the user wants to remove their profile image
       if (existingProfile?.profile_image_url) {
-        const oldFilePath = existingProfile.profile_image_url.split("/").pop()
-        if (oldFilePath) {
-          await supabase.storage.from("profile-images").remove([oldFilePath])
+        try {
+          const oldUrl = new URL(existingProfile.profile_image_url)
+          const oldPath = oldUrl.pathname.split("/").slice(-2).join("/")
+          if (oldPath.startsWith("public/")) {
+            await supabase.storage.from("public").remove([oldPath.replace("public/", "")])
+          }
+        } catch (deleteError) {
+          console.error("Error deleting profile image:", deleteError)
+          // Continue even if delete fails
         }
       }
       profile_image_url = null

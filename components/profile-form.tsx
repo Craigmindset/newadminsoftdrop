@@ -79,11 +79,11 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      // Validate file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Image must be less than 5MB",
+          description: "Image must be less than 2MB",
           variant: "destructive",
         })
         return
@@ -271,7 +271,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
               <p className="text-xs text-muted-foreground text-center">
                 Click to upload or change your profile picture
                 <br />
-                (Max size: 5MB)
+                (Max size: 2MB)
               </p>
             </div>
 
