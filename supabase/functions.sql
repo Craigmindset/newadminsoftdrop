@@ -7,7 +7,7 @@ AS $$
 BEGIN
   RETURN TRUE;
 END;
-$$;
+$;
 
 -- Function to update sender profile that can be called by the user
 CREATE OR REPLACE FUNCTION public.update_sender_profile(
@@ -19,7 +19,7 @@ CREATE OR REPLACE FUNCTION public.update_sender_profile(
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+AS $
 BEGIN
   UPDATE public.sender_profiles
   SET 
@@ -35,7 +35,7 @@ BEGIN
     VALUES (p_user_id, p_full_name, p_email, p_address, NOW(), NOW());
   END IF;
 END;
-$$;
+$;
 
 -- Admin function to update sender profile with service role
 CREATE OR REPLACE FUNCTION public.admin_update_sender_profile(
@@ -47,7 +47,7 @@ CREATE OR REPLACE FUNCTION public.admin_update_sender_profile(
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+AS $
 BEGIN
   UPDATE public.sender_profiles
   SET 
@@ -63,4 +63,4 @@ BEGIN
     VALUES (p_user_id, p_full_name, p_email, p_address, NOW(), NOW());
   END IF;
 END;
-$$;
+$;

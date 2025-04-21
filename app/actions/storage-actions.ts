@@ -1,6 +1,6 @@
 "use server"
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import { getSupabaseServer } from "@/lib/supabase-server"
 import { cookies } from "next/headers"
 
 export async function uploadProfileImage(imageFile: File) {
@@ -18,24 +18,15 @@ export async function uploadProfileImage(imageFile: File) {
       return { success: false, error: "User ID not found" }
     }
 
-    // Try to use admin client to bypass RLS
-    let supabase
-    try {
-      supabase = getSupabaseAdmin()
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          "Missing Supabase admin credentials. Please set SUPABASE_SERVICE_ROLE_KEY in your environment variables.",
-      }
-    }
+    // Get the regular user client
+    const supabase = getSupabaseServer()
 
     // Use the known bucket name
     const bucketName = "profile_images"
 
-    // Generate a unique filename
+    // Generate a unique filename with user-specific path
     const fileExt = imageFile.name.split(".").pop()
-    const fileName = `profile-${userId}-${Date.now()}.${fileExt}`
+    const fileName = `${userId}/${Date.now()}.${fileExt}`
 
     // Upload the image to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -94,17 +85,15 @@ export async function deleteProfileImage(filePath: string) {
       return { success: false, error: "Not authenticated" }
     }
 
-    // Try to use admin client to bypass RLS
-    let supabase
-    try {
-      supabase = getSupabaseAdmin()
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          "Missing Supabase admin credentials. Please set SUPABASE_SERVICE_ROLE_KEY in your environment variables.",
-      }
+    const session = JSON.parse(sessionCookie.value)
+    const userId = session.userId
+
+    if (!userId) {
+      return { success: false, error: "User ID not found" }
     }
+
+    // Get the regular user client
+    const supabase = getSupabaseServer()
 
     // Use the known bucket name
     const bucketName = "profile_images"
