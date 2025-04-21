@@ -1,40 +1,45 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useCallback } from "react"
 
 type Notification = {
-  id: number
+  id: string
   title: string
   description: string
-  variant?: "default" | "destructive"
+  type: "success" | "error" | "info"
+  read: boolean
 }
 
-const useNotifications = () => {
+function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
 
-  useEffect(() => {
-    // Simulate fetching initial notifications and calculating unread count
-    // In a real application, you would fetch this data from an API or database
-    const initialNotifications = [] // Replace with actual initial notifications
-    setNotifications(initialNotifications)
-    setUnreadCount(initialNotifications.length)
+  const addNotification = useCallback((notification: Omit<Notification, "id" | "read">) => {
+    const id = Math.random().toString(36).substring(2, 9)
+    setNotifications((prev) => [...prev, { id, ...notification, read: false }])
   }, [])
 
-  const addNotification = (notification: Omit<Notification, "id">) => {
-    setNotifications((prev) => [{ id: Date.now(), ...notification }, ...prev])
-    setUnreadCount((prev) => prev + 1)
-  }
+  const markAsRead = useCallback((id: string) => {
+    setNotifications((prev) =>
+      prev.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)),
+    )
+  }, [])
 
-  const markAsRead = (id: number) => {
+  const markAllAsRead = useCallback(() => {
+    setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })))
+  }, [])
+
+  const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((notification) => notification.id !== id))
-    setUnreadCount((prev) => prev - 1)
-  }
+  }, [])
+
+  const unreadCount = notifications.filter((notification) => !notification.read).length
 
   return {
     notifications,
     addNotification,
     markAsRead,
+    markAllAsRead,
+    removeNotification,
     unreadCount,
   }
 }

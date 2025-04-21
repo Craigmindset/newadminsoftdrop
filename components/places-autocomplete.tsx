@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Loader2, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/use-toast"
+import useNotifications from "@/hooks/use-notifications"
 
 interface PlacesAutocompleteProps {
   onPlaceSelect: (place: google.maps.places.PlaceResult) => void
@@ -32,7 +32,7 @@ export default function PlacesAutocomplete({
   const [loading, setLoading] = useState(false)
   const [scriptLoaded, setScriptLoaded] = useState(false)
   const [gettingCurrentLocation, setGettingCurrentLocation] = useState(false)
-  const { toast } = useToast()
+  const { addNotification } = useNotifications()
 
   // Load the Google Maps script
   useEffect(() => {
@@ -89,10 +89,10 @@ export default function PlacesAutocomplete({
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      toast({
+      addNotification({
         title: "Error",
         description: "Geolocation is not supported by your browser",
-        variant: "destructive",
+        type: "error",
       })
       return
     }
@@ -100,9 +100,10 @@ export default function PlacesAutocomplete({
     setGettingCurrentLocation(true)
 
     // Show feedback to user
-    toast({
+    addNotification({
       title: "Getting your location",
       description: "Please allow location access when prompted",
+      type: "info",
     })
 
     navigator.geolocation.getCurrentPosition(
@@ -134,25 +135,26 @@ export default function PlacesAutocomplete({
                 setValue(results[0].formatted_address)
                 onPlaceSelect(place)
 
-                toast({
+                addNotification({
                   title: "Location found",
                   description: "Your current location has been set as the pickup point",
+                  type: "success",
                 })
               } else {
-                toast({
+                addNotification({
                   title: "Error",
                   description: "Couldn't find address for your location",
-                  variant: "destructive",
+                  type: "error",
                 })
               }
             },
           )
         } catch (error) {
           setGettingCurrentLocation(false)
-          toast({
+          addNotification({
             title: "Error",
             description: "Failed to get your current location",
-            variant: "destructive",
+            type: "error",
           })
         }
       },
@@ -172,10 +174,10 @@ export default function PlacesAutocomplete({
             break
         }
 
-        toast({
+        addNotification({
           title: "Error",
           description: errorMessage,
-          variant: "destructive",
+          type: "error",
         })
       },
       // Optimize for mobile: increase timeout and reduce accuracy requirements
