@@ -27,8 +27,28 @@ function getServiceSupabase() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 
+    // Log the actual values for debugging (only in non-production)
+    if (process.env.NODE_ENV !== "production") {
+      console.log(
+        "Supabase URL:",
+        supabaseUrl ? "Set (starts with: " + supabaseUrl.substring(0, 10) + "...)" : "Not set",
+      )
+      console.log(
+        "Supabase Service Key:",
+        supabaseServiceKey ? "Set (starts with: " + supabaseServiceKey.substring(0, 5) + "...)" : "Not set",
+      )
+    }
+
+    // Validate URL format
     if (!supabaseUrl) {
       throw new Error("NEXT_PUBLIC_SUPABASE_URL is not defined")
+    }
+
+    // Check if URL is valid
+    try {
+      new URL(supabaseUrl)
+    } catch (error) {
+      throw new Error(`Invalid Supabase URL format: ${supabaseUrl}`)
     }
 
     if (!supabaseServiceKey) {
@@ -50,11 +70,16 @@ function getServiceSupabase() {
 // Helper function for consistent error logging
 function logError(message: string, error: any, userId?: string, context?: string) {
   const timestamp = new Date().toISOString()
+
+  // Make sure we're using the correct environment value
+  // Don't use VERCEL_ENV directly as it appears to be misconfigured
+  const environment = process.env.NODE_ENV || "development"
+
   const errorDetails = {
     message,
     timestamp,
     userId: userId || "unknown",
-    environment: process.env.VERCEL_ENV || "development",
+    environment,
     context,
     error:
       error instanceof Error
@@ -76,8 +101,11 @@ export async function updateSenderProfile(formData: ProfileFormData): Promise<Pr
   let context = "initializing"
 
   try {
+    // Use NODE_ENV instead of VERCEL_ENV since VERCEL_ENV appears to be misconfigured
+    const environment = process.env.NODE_ENV || "development"
+
     // Log environment information
-    console.log(`[${timestamp}] Profile update initiated in environment: ${process.env.VERCEL_ENV || "development"}`)
+    console.log(`[${timestamp}] Profile update initiated in environment: ${environment}`)
     console.log(`[${timestamp}] Supabase URL available: ${!!process.env.NEXT_PUBLIC_SUPABASE_URL}`)
     console.log(`[${timestamp}] Supabase service role key available: ${!!process.env.SUPABASE_SERVICE_ROLE_KEY}`)
 
