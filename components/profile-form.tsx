@@ -43,6 +43,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [storageError, setStorageError] = useState(false)
+  const [adminCredentialsMissing, setAdminCredentialsMissing] = useState(false)
 
   const [formData, setFormData] = useState<ProfileFormData>({
     fullName: initialData?.full_name || "",
@@ -75,10 +76,10 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   }
 
   const handleImageClick = () => {
-    if (storageError) {
+    if (storageError || adminCredentialsMissing) {
       toast({
         title: "Image Upload Unavailable",
-        description: "Profile image upload is currently unavailable. Please try again later.",
+        description: "Profile image upload is currently unavailable. Please contact the administrator.",
         variant: "destructive",
       })
       return
@@ -155,10 +156,10 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       submitData.append("email", formData.email || "")
       submitData.append("address", formData.address || "")
 
-      if (profileImage) {
+      if (profileImage && !adminCredentialsMissing) {
         setIsUploading(true)
         submitData.append("profileImage", profileImage)
-      } else if (profileImagePreview === null && initialData?.profile_image_url) {
+      } else if (profileImagePreview === null && initialData?.profile_image_url && !adminCredentialsMissing) {
         // If the user removed the image
         submitData.append("removeProfileImage", "true")
       }
@@ -189,8 +190,13 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       } else {
         setError(result.error || "Failed to update profile. Please try again.")
 
+        // Check if the error is related to missing admin credentials
+        if (result.error?.includes("Missing Supabase admin credentials")) {
+          setAdminCredentialsMissing(true)
+          setStorageError(true)
+        }
         // Check if the error is related to storage
-        if (
+        else if (
           result.error?.includes("Storage") ||
           result.error?.includes("bucket") ||
           result.error?.includes("row-level security") ||
@@ -237,7 +243,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       formData.email !== (initialData?.email || "") ||
       formData.address !== (initialData?.address || "") ||
       profileImage !== null ||
-      (profileImagePreview !== null && profileImagePreview !== initialData?.profile_image_url)
+      (profileImagePreview === null && initialData?.profile_image_url !== null)
     )
   }
 
@@ -259,7 +265,20 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         <CardDescription>Update your personal details</CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
+        {adminCredentialsMissing && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <AlertTitle>Missing Supabase admin credentials</AlertTitle>
+              <p>Please set SUPABASE_SERVICE_ROLE_KEY in your environment variables.</p>
+              <p className="text-sm mt-2">
+                You can still update your profile information, but profile image upload is unavailable.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {error && !adminCredentialsMissing && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
@@ -293,8 +312,8 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
             <div className="flex flex-col items-center space-y-3">
               <Label htmlFor="profileImage">Profile Picture</Label>
               <div
-                className={`relative ${!storageError ? "cursor-pointer" : ""} group`}
-                onClick={storageError ? undefined : handleImageClick}
+                className={`relative ${!storageError && !adminCredentialsMissing ? "cursor-pointer" : ""} group`}
+                onClick={storageError || adminCredentialsMissing ? undefined : handleImageClick}
               >
                 <Avatar className="h-24 w-24 border-2 border-muted">
                   {isUploading ? (
@@ -309,13 +328,13 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
                   )}
                 </Avatar>
 
-                {!storageError && (
+                {!storageError && !adminCredentialsMissing && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                     <Camera className="h-8 w-8 text-white" />
                   </div>
                 )}
 
-                {profileImagePreview && !isUploading && !storageError && (
+                {profileImagePreview && !isUploading && !storageError && !adminCredentialsMissing && (
                   <Button
                     type="button"
                     variant="destructive"
@@ -334,14 +353,14 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
                 accept="image/*"
                 className="hidden"
                 onChange={handleImageChange}
-                disabled={isUploading || storageError}
+                disabled={isUploading || storageError || adminCredentialsMissing}
               />
               <p className="text-xs text-muted-foreground text-center">
-                {storageError
+                {storageError || adminCredentialsMissing
                   ? "Profile image upload is currently unavailable"
                   : "Click to upload or change your profile picture"}
                 <br />
-                {!storageError && "(Max size: 2MB)"}
+                {!storageError && !adminCredentialsMissing && "(Max size: 2MB)"}
               </p>
             </div>
 

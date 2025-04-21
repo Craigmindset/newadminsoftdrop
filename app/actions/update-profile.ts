@@ -1,6 +1,7 @@
 "use server"
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import { getSupabaseServer } from "@/lib/supabase-server"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 import { uploadProfileImage, deleteProfileImage } from "./storage-actions"
@@ -34,8 +35,16 @@ export async function updateSenderProfile(formData: FormData) {
     const profileImage = formData.get("profileImage") as File | null
     const removeProfileImage = formData.get("removeProfileImage") === "true"
 
-    // Get Supabase admin client to bypass RLS
-    const supabase = getSupabaseAdmin()
+    // Try to get admin client, but have a fallback
+    let supabase
+    let isUsingAdminClient = true
+    try {
+      supabase = getSupabaseAdmin()
+    } catch (error) {
+      console.warn("Failed to get admin client, falling back to regular client:", error)
+      supabase = getSupabaseServer()
+      isUsingAdminClient = false
+    }
 
     // Check if profile exists
     const { data: existingProfile, error: fetchError } = await supabase
@@ -54,7 +63,7 @@ export async function updateSenderProfile(formData: FormData) {
     let profile_image_url = existingProfile?.profile_image_url || null
     let imageUploadError = null
 
-    if (profileImage) {
+    if (profileImage && isUsingAdminClient) {
       try {
         // If there was a previous image, try to delete it
         if (existingProfile?.profile_image_url) {
@@ -87,7 +96,9 @@ export async function updateSenderProfile(formData: FormData) {
         imageUploadError = "Failed to process profile image. Please try again."
         // Continue with profile update even if image upload fails
       }
-    } else if (removeProfileImage) {
+    } else if (profileImage && !isUsingAdminClient) {
+      imageUploadError = "Profile image upload requires admin credentials. Please contact the administrator."
+    } else if (removeProfileImage && isUsingAdminClient) {
       // If the user wants to remove their profile image
       if (existingProfile?.profile_image_url) {
         try {
@@ -111,8 +122,12 @@ export async function updateSenderProfile(formData: FormData) {
       full_name: fullName,
       email: email,
       address: address,
-      profile_image_url,
       updated_at: new Date().toISOString(),
+    }
+
+    // Only include profile_image_url if we're using admin client or not changing it
+    if (isUsingAdminClient || (!profileImage && !removeProfileImage)) {
+      profileData["profile_image_url"] = profile_image_url
     }
 
     let result
@@ -127,11 +142,22 @@ export async function updateSenderProfile(formData: FormData) {
         user_id: userId,
         phone_number: phoneNumber,
         created_at: new Date().toISOString(),
+        profile_image_url: profile_image_url,
       })
     }
 
     if (result.error) {
       console.error("Error updating profile:", result.error)
+
+      // Check if this is an RLS error
+      if (result.error.message.includes("row-level security") || result.error.message.includes("policy")) {
+        return {
+          success: false,
+          error: "Permission denied: Unable to update profile due to security policies.",
+          details: "This may be resolved by setting up the SUPABASE_SERVICE_ROLE_KEY environment variable.",
+        }
+      }
+
       return { success: false, error: result.error.message }
     }
 
@@ -172,8 +198,14 @@ export async function getSenderProfile() {
       return null
     }
 
-    // Use admin client to bypass RLS
-    const supabase = getSupabaseAdmin()
+    // Try to get admin client, but have a fallback
+    let supabase
+    try {
+      supabase = getSupabaseAdmin()
+    } catch (error) {
+      console.warn("Failed to get admin client, falling back to regular client:", error)
+      supabase = getSupabaseServer()
+    }
 
     // Get profile data
     const { data, error } = await supabase.from("sender_profiles").select("*").eq("user_id", userId).single()
