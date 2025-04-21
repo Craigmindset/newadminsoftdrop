@@ -1,18 +1,15 @@
 "use client"
 
-import { Textarea } from "@/components/ui/textarea"
-
 import type React from "react"
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Label, Textarea } from "@/components/ui/textarea"
 import { updateSenderProfile, type ProfileFormData } from "@/app/actions/update-profile"
 import { uploadProfileImage } from "@/app/actions/upload-image"
-import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Check } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import MobileImageUpload from "./mobile-image-upload"
 import { isMobileDevice } from "@/lib/mobile-image-utils"
 import useNotifications from "@/hooks/use-notifications"
@@ -34,14 +31,8 @@ interface ProfileFormProps {
 }
 
 export default function ProfileForm({ initialData }: ProfileFormProps) {
-  const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const [errorDetails, setErrorDetails] = useState<any | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
   const [profileImage, setProfileImage] = useState<string | null>(initialData?.profile_image_url || null)
   const [imageFile, setImageFile] = useState<File | Blob | null>(null)
   const [formData, setFormData] = useState<ProfileFormData>({
@@ -51,6 +42,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   })
   const isMobile = isMobileDevice()
   const { addNotification } = useNotifications()
+  const [success, setSuccess] = useState(false)
 
   // Reset form data if initialData changes
   useEffect(() => {
@@ -70,27 +62,21 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       ...prev,
       [name]: value,
     }))
-    // Clear success and error states when form is modified
-    if (success) setSuccess(false)
-    if (error) setError(null)
   }
 
   const handleImageSelect = (file: File | Blob) => {
     setImageFile(file)
-    setUploadError(null)
   }
 
   const handleImageRemove = () => {
     setProfileImage(null)
     setImageFile(null)
-    setUploadError(null)
   }
 
   const handleImageUpload = async () => {
     if (!imageFile) return
 
     setIsUploading(true)
-    setUploadError(null)
 
     try {
       const formData = new FormData()
@@ -108,30 +94,25 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         addNotification({
           title: "Image Uploaded",
           description: "Your profile image has been updated successfully.",
+          type: "success",
         })
 
         // Log success details
         console.log("[Client] Upload successful:", result.details)
       } else {
-        setUploadError(result.error || "Failed to upload image. Please try again.")
-
-        // Log error details
-        console.error("[Client] Upload failed:", result)
-
         addNotification({
           title: "Upload Failed",
           description: result.error || "Failed to upload image. Please try again.",
-          variant: "destructive",
+          type: "error",
         })
       }
     } catch (error) {
       console.error("[Client] Exception during upload:", error)
 
-      setUploadError(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.")
       addNotification({
         title: "Error",
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
-        variant: "destructive",
+        type: "error",
       })
     } finally {
       setIsUploading(false)
@@ -141,26 +122,16 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const handleSubmit = async (e: React.Event) => {
     e.preventDefault()
     setIsSubmitting(true)
-    setSuccess(false)
-    setError(null)
-    setErrorDetails(null)
 
     try {
       // Upload image first if there's a new image
       if (imageFile) {
         await handleImageUpload()
-
-        // If there was an error uploading the image, stop the form submission
-        if (uploadError) {
-          setIsSubmitting(false)
-          return
-        }
       }
 
       // Log client-side submission attempt
       console.log(`[${new Date().toISOString()}] Profile update submission attempt`, {
         environment: process.env.NODE_ENV,
-        retryCount,
       })
 
       const result = await updateSenderProfile(formData)
@@ -170,20 +141,13 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         addNotification({
           title: "Profile Updated",
           description: "Your profile information has been updated successfully.",
+          type: "success",
         })
-        // Reset retry count on success
-        setRetryCount(0)
       } else {
-        console.error("Profile update error:", result)
-
-        // Set error state for UI display
-        setError(result.error || "Failed to update profile. Please try again.")
-        setErrorDetails(result.errorDetails || null)
-
         addNotification({
           title: "Update Failed",
           description: result.error || "Failed to update profile. Please try again.",
-          variant: "destructive",
+          type: "error",
         })
       }
     } catch (error) {
@@ -202,28 +166,17 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
               }
             : String(error),
         environment: process.env.NODE_ENV,
-        retryCount,
       }
       console.error("Client-side error details:", errorInfo)
-
-      // Set error state for UI display
-      setError(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.")
 
       addNotification({
         title: "Error",
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
-        variant: "destructive",
+        type: "error",
       })
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  const handleRetry = () => {
-    setRetryCount((prev) => prev + 1)
-    setError(null)
-    setErrorDetails(null)
-    handleSubmit(new Event("submit") as any)
   }
 
   return (
@@ -234,38 +187,6 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
           <CardDescription>Update your personal details</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* {error && (
-           <Alert variant="destructive" className="mb-6">
-             <AlertCircle className="h-4 w-4" />
-             <AlertTitle>Error updating profile</AlertTitle>
-             <AlertDescription>
-               <div className="space-y-2">
-                 <p>{error}</p>
-                 {errorDetails && (
-                   <details className="text-xs">
-                     <summary className="cursor-pointer">Technical details</summary>
-                     <pre className="mt-2 whitespace-pre-wrap bg-destructive/10 p-2 rounded">
-                       {JSON.stringify(errorDetails, null, 2)}
-                     </pre>
-                   </details>
-                 )}
-                 <Button variant="outline" size="sm" onClick={handleRetry} className="mt-2" disabled={isSubmitting}>
-                   <RefreshCw className="mr-2 h-3 w-3" />
-                   Retry
-                 </Button>
-               </div>
-             </AlertDescription>
-           </Alert>
-         )}
-
-         {success && (
-           <Alert className="mb-6 border-green-500 bg-green-50 text-green-800">
-             <Check className="h-4 w-4" />
-             <AlertTitle>Success</AlertTitle>
-             <AlertDescription>Your profile has been updated successfully.</AlertDescription>
-           </Alert>
-         )} */}
-
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
@@ -315,20 +236,11 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
             </div>
 
             <div className="flex justify-end">
-              <Button
-                type="submit"
-                disabled={isSubmitting || isUploading || (!hasChanges() && !imageFile)}
-                className="w-full md:w-auto"
-              >
+              <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Updating...
-                  </>
-                ) : success ? (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    Updated
                   </>
                 ) : (
                   "Update Profile"
@@ -351,18 +263,9 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
             onImageSelect={handleImageSelect}
             onImageRemove={handleImageRemove}
             isUploading={isUploading}
-            uploadError={uploadError}
           />
         </CardContent>
       </Card>
     </div>
   )
-
-  function hasChanges() {
-    return (
-      formData.fullName !== (initialData?.full_name || "") ||
-      formData.email !== (initialData?.email || "") ||
-      formData.address !== (initialData?.address || "")
-    )
-  }
 }
