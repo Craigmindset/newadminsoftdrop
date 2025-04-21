@@ -15,6 +15,18 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 
+// Placeholder for authenticateCarrier function (replace with your actual implementation)
+async function authenticateCarrier(phone: string, pin: string): Promise<{ success: boolean; error?: string }> {
+  // Simulate authentication logic
+  await new Promise((resolve) => setTimeout(resolve, 500)) // Simulate network request
+
+  if (phone === "+2348012345678" && pin === "123456") {
+    return { success: true }
+  } else {
+    return { success: false, error: "Invalid phone number or PIN" }
+  }
+}
+
 export default function CarrierLoginPage() {
   const [showPin, setShowPin] = useState(false)
   const [phoneNumber, setPhoneNumber] = useState("")
@@ -53,15 +65,20 @@ export default function CarrierLoginPage() {
     setIsLoading(true)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Format the phone number for authentication
+      const formattedPhone = phoneNumber.startsWith("0") ? `+234${phoneNumber.slice(1)}` : `+234${phoneNumber}`
 
-      // In a real app, you would validate credentials with your backend
-      // For demonstration purposes, let's consider any login successful
-      console.log("Login successful, redirecting to carrier dashboard...")
-      router.push("/carrier/dashboard")
+      // Call the authenticateCarrier function
+      const result = await authenticateCarrier(formattedPhone, pin)
+
+      if (result.success) {
+        console.log("Login successful, redirecting to carrier dashboard...")
+        router.push("/carrier/dashboard")
+      } else {
+        setError(result.error || "Invalid phone number or PIN")
+      }
     } catch (error) {
-      setError("Invalid phone number or PIN")
+      setError("An unexpected error occurred")
       console.error("Login failed:", error)
     } finally {
       setIsLoading(false)
