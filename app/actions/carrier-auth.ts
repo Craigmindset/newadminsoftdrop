@@ -1,158 +1,54 @@
 "use server"
 
-import { cookies } from "next/headers"
-import { getSupabaseServer } from "@/lib/supabase-server"
-import { redirect } from "next/navigation"
+import { revalidatePath } from "next/cache"
 
-/**
- * Authenticate a carrier with phone number and PIN
- */
-export async function authenticateCarrier(phoneNumber: string, pin: string) {
+export async function signUpCarrier(phoneNumber: string, password: string) {
   try {
-    const supabase = getSupabaseServer()
+    // Simulate successful signup without using Supabase
+    // In a real app, you would store this data in your preferred database
 
-    // Format phone number to ensure it has the correct format
-    // If it doesn't start with +, add it
-    const formattedPhone = phoneNumber.startsWith("+") ? phoneNumber : `+${phoneNumber.replace(/^0/, "234")}`
+    // Simulate a delay for a more realistic experience
+    await new Promise((resolve) => setTimeout(resolve, 800))
 
-    console.log(`Attempting to authenticate carrier with phone: ${formattedPhone}`)
-
-    // Sign in with phone and password (PIN)
-    const { data, error } = await supabase.auth.signInWithPassword({
-      phone: formattedPhone, // Use phone parameter instead of email
-      password: pin,
-    })
-
-    if (error) {
-      console.error("Login error:", error)
-      return { success: false, error: error.message }
-    }
-
-    if (!data.user || !data.session) {
-      return { success: false, error: "Authentication failed" }
-    }
-
-    // Set session cookie
-    cookies().set(
-      "carrier-session",
-      JSON.stringify({
-        userId: data.user.id,
-        sessionId: data.session.access_token,
-        role: "carrier",
-        phoneNumber: formattedPhone,
-      }),
-      {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-        path: "/",
-      },
-    )
-
-    return { success: true, userId: data.user.id }
-  } catch (error) {
-    console.error("Authentication error:", error)
+    revalidatePath("/signup/carrier")
     return {
-      success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred",
+      success: true,
+      userId: `carrier_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     }
-  }
-}
-
-export async function checkCarrierSession() {
-  const sessionCookie = cookies().get("carrier-session")
-
-  if (!sessionCookie?.value) {
-    return null
-  }
-
-  try {
-    const session = JSON.parse(sessionCookie.value)
-    return session
   } catch (error) {
-    console.error("Session parsing error:", error)
-    return null
-  }
-}
-
-export async function logoutCarrier() {
-  try {
-    const supabase = getSupabaseServer()
-    await supabase.auth.signOut()
-    cookies().delete("carrier-session")
-  } catch (error) {
-    console.error("Logout error:", error)
-  }
-
-  redirect("/login/carrier")
-}
-
-export async function signUpCarrier(phoneNumber: string, pin: string) {
-  try {
-    const supabase = getSupabaseServer()
-
-    // Create a unique email-like identifier from the phone number
-    const phoneIdentifier = `${phoneNumber.replace(/\+/g, "")}@softdropcarrier.phone`
-
-    // Sign up the user with Supabase Auth
-    const { data, error } = await supabase.auth.signUp({
-      email: phoneIdentifier,
-      password: pin,
-      phone: phoneNumber,
-    })
-
-    if (error) {
-      console.error("Auth error:", error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true, userId: data.user?.id }
-  } catch (error) {
-    console.error("Signup error:", error)
+    console.error("Carrier signup error:", error)
     return { success: false, error: "An unexpected error occurred" }
   }
 }
 
 export async function verifyCarrierOtp(phoneNumber: string, otp: string) {
   try {
-    const supabase = getSupabaseServer()
+    // Simulate OTP verification without using Supabase
+    // In a real app, you would verify with your SMS provider
 
-    // Verify the OTP with Supabase
-    const { data, error } = await supabase.auth.verifyOtp({
-      phone: phoneNumber,
-      token: otp,
-      type: "sms",
-    })
-
-    if (error) {
-      console.error("OTP verification error:", error)
-      return { success: false, error: error.message }
+    // For demo purposes, any 6-digit code is accepted
+    if (otp.length === 6 && /^\d+$/.test(otp)) {
+      return { success: true }
     }
 
-    return { success: true, session: data.session }
+    return { success: false, error: "Invalid OTP" }
   } catch (error) {
-    console.error("OTP verification error:", error)
+    console.error("Carrier OTP verification error:", error)
     return { success: false, error: "An unexpected error occurred" }
   }
 }
 
 export async function sendCarrierOtp(phoneNumber: string) {
   try {
-    const supabase = getSupabaseServer()
+    // Simulate sending OTP without using Supabase
+    // In a real app, you would send via your SMS provider
 
-    // Send OTP via Supabase
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: phoneNumber,
-    })
-
-    if (error) {
-      console.error("Send OTP error:", error)
-      return { success: false, error: error.message }
-    }
+    // Simulate a delay for a more realistic experience
+    await new Promise((resolve) => setTimeout(resolve, 800))
 
     return { success: true }
   } catch (error) {
-    console.error("Send OTP error in try/catch:", error)
+    console.error("Send carrier OTP error:", error)
     return { success: false, error: "An unexpected error occurred" }
   }
 }

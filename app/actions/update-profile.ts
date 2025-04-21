@@ -3,7 +3,6 @@
 import { getSupabaseServer } from "@/lib/supabase-server"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
-import { uploadProfileImage, deleteProfileImage } from "./storage-actions"
 
 export type ProfileFormData = {
   fullName?: string
@@ -11,7 +10,7 @@ export type ProfileFormData = {
   address?: string
 }
 
-export async function updateSenderProfile(formData: FormData) {
+export async function updateSenderProfile(formData: ProfileFormData) {
   try {
     // Get the session from cookies
     const sessionCookie = cookies().get("sb-session")
@@ -27,115 +26,48 @@ export async function updateSenderProfile(formData: FormData) {
       return { success: false, error: "User ID not found" }
     }
 
-    // Extract form data
-    const fullName = formData.get("fullName") as string
-    const email = formData.get("email") as string
-    const address = formData.get("address") as string
-    const profileImage = formData.get("profileImage") as File | null
-    const removeProfileImage = formData.get("removeProfileImage") === "true"
-
-    // Get the regular user client
+    // Get Supabase client
     const supabase = getSupabaseServer()
 
-    // Fetch existing profile to check for existing image
-    const { data: existingProfile, error: existingProfileError } = await supabase
-      .from("sender_profiles")
-      .select("profile_image_url")
-      .eq("user_id", userId)
-      .single()
+    // Check if profile exists
+    const { data: existingProfile } = await supabase.from("sender_profiles").select("*").eq("user_id", userId).single()
 
-    if (existingProfileError && existingProfileError.code !== "PGRST116") {
-      console.error("Error fetching existing profile:", existingProfileError)
-      return { success: false, error: "Failed to fetch existing profile." }
-    }
-
-    // Handle profile image upload if provided
-    let profile_image_url = null
-    let imageUploadError = null
-
-    if (profileImage) {
-      try {
-        // If there was a previous image, try to delete it
-        if (removeProfileImage && existingProfile?.profile_image_url) {
-          try {
-            // Extract the filename from the URL
-            const oldUrl = new URL(existingProfile.profile_image_url)
-            const oldPath = oldUrl.pathname.split("/").pop()
-
-            if (oldPath) {
-              await deleteProfileImage(oldPath)
-            }
-          } catch (deleteError) {
-            console.error("Error deleting profile image:", deleteError)
-            // Continue even if delete fails
-          }
-        }
-
-        // Upload the new image using our dedicated function
-        const uploadResult = await uploadProfileImage(profileImage)
-
-        if (!uploadResult.success) {
-          imageUploadError = uploadResult.error
-          console.error("Image upload failed but continuing with profile update:", uploadResult.error)
-          // Continue with profile update even if image upload fails
-        } else {
-          profile_image_url = uploadResult.url
-        }
-      } catch (uploadError) {
-        console.error("Error handling profile image:", uploadError)
-        imageUploadError = "Failed to process profile image. Please try again."
-        // Continue with profile update even if image upload fails
-      }
-    } else if (removeProfileImage) {
-      // If the user wants to remove their profile image
-      profile_image_url = null
-    }
-
-    // Prepare the profile data
-    const profileData = {
-      full_name: fullName,
-      email: email,
-      address: address,
-      updated_at: new Date().toISOString(),
-      profile_image_url: profile_image_url,
-    }
-
-    let result
-
-    try {
-      result = await supabase.from("sender_profiles").upsert(
-        {
-          user_id: userId,
-          phone_number: phoneNumber,
-          full_name: fullName,
-          email: email,
-          address: address,
+    if (existingProfile) {
+      // Update existing profile
+      const { error } = await supabase
+        .from("sender_profiles")
+        .update({
+          full_name: formData.fullName,
+          email: formData.email,
+          address: formData.address,
           updated_at: new Date().toISOString(),
-          profile_image_url: profile_image_url,
-        },
-        { onConflict: "user_id" },
-      )
+        })
+        .eq("user_id", userId)
 
-      if (result.error) {
-        console.error("Error updating profile:", result.error)
-        return { success: false, error: result.error.message }
+      if (error) {
+        console.error("Error updating profile:", error)
+        return { success: false, error: error.message }
       }
-    } catch (dbError) {
-      console.error("Database error:", dbError)
-      return { success: false, error: "Failed to update profile. Please try again." }
+    } else {
+      // Create new profile
+      const { error } = await supabase.from("sender_profiles").insert({
+        user_id: userId,
+        phone_number: phoneNumber,
+        full_name: formData.fullName,
+        email: formData.email,
+        address: formData.address,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+
+      if (error) {
+        console.error("Error creating profile:", error)
+        return { success: false, error: error.message }
+      }
     }
 
     // Revalidate the profile page to show updated data
     revalidatePath("/dashboard/profile")
-
-    // Return success but include image error if there was one
-    if (imageUploadError) {
-      return {
-        success: true,
-        warning: "Profile updated but image upload failed",
-        error: imageUploadError,
-      }
-    }
 
     return { success: true }
   } catch (error) {
@@ -162,13 +94,13 @@ export async function getSenderProfile() {
       return null
     }
 
-    // Use regular client first
+    // Get Supabase client
     const supabase = getSupabaseServer()
 
     // Get profile data
     const { data, error } = await supabase.from("sender_profiles").select("*").eq("user_id", userId).single()
 
-    if (error && error.code !== "PGRST116") {
+    if (error) {
       console.error("Error fetching profile:", error)
       return null
     }
