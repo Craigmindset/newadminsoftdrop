@@ -134,7 +134,7 @@ export default function CarrierDataPage() {
                   <Label htmlFor="registrant">Name of Registrant</Label>
                   <Input
                     id="registrant"
-                    placeholder="Enter name of vehicle registrant"
+                    placeholder="Enter name of carriage registrant"
                     value={registrantName}
                     onChange={(e) => setRegistrantName(e.target.value)}
                     required={needsCarriageDetails}

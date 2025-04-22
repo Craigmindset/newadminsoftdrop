@@ -59,7 +59,7 @@ export default function ProcessingPage() {
           {isVerified ? (
             <div className="space-y-4">
               <p>
-                You are now a verified carrier on LogiSwift. You can start accepting delivery requests and earning
+                You are now a verified carrier on SoftDrop You can start accepting delivery requests and earning
                 money.
               </p>
 
