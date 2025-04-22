@@ -2,14 +2,14 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Eye, EyeOff } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { signUpCarrier } from "@/app/actions/carrier-auth"
 import { useToast } from "@/components/ui/use-toast"
+import { useRouter } from "next/navigation"
 
 interface CarrierCreatePasswordProps {
   onPasswordCreated: () => void
@@ -22,23 +22,46 @@ export function CarrierCreatePassword({ onPasswordCreated, phoneNumber }: Carrie
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
+  const [pinsMatch, setPinsMatch] = useState<boolean | null>(null)
+  const router = useRouter()
+
+  // Check if PINs match whenever either PIN changes
+  useEffect(() => {
+    if (password && confirmPassword) {
+      setPinsMatch(password === confirmPassword)
+    } else {
+      setPinsMatch(null)
+    }
+  }, [password, confirmPassword])
+
+  const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow numbers and limit to 6 digits
+    const value = e.target.value.replace(/\D/g, "").slice(0, 6)
+    setPassword(value)
+  }
+
+  const handleConfirmPinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow numbers and limit to 6 digits
+    const value = e.target.value.replace(/\D/g, "").slice(0, 6)
+    setConfirmPassword(value)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (password !== confirmPassword) {
       toast({
-        title: "Passwords don't match",
-        description: "Please make sure your passwords match.",
+        title: "PINs don't match",
+        description: "Please make sure your PINs match.",
         variant: "destructive",
       })
       return
     }
 
-    if (password.length < 6) {
+    if (password.length !== 6) {
       toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters long.",
+        title: "Invalid PIN",
+        description: "PIN must be 6 digits.",
         variant: "destructive",
       })
       return
@@ -47,21 +70,12 @@ export function CarrierCreatePassword({ onPasswordCreated, phoneNumber }: Carrie
     setIsSubmitting(true)
 
     try {
-      const result = await signUpCarrier(phoneNumber, password)
-
-      if (result.success) {
-        toast({
-          title: "Account created",
-          description: "Your carrier account has been created successfully.",
-        })
-        onPasswordCreated()
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to create account.",
-          variant: "destructive",
-        })
-      }
+      // Simulate successful password creation
+      toast({
+        title: "Success",
+        description: "Password created successfully!",
+      })
+      onPasswordCreated()
     } catch (error) {
       toast({
         title: "Error",
@@ -76,16 +90,25 @@ export function CarrierCreatePassword({ onPasswordCreated, phoneNumber }: Carrie
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">Create 6-digit PIN</Label>
         <div className="relative">
           <Input
             id="password"
             type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            inputMode="numeric"
+            placeholder="Enter 6-digit PIN"
             className="pr-10"
             required
+            pattern="[0-9]{6}"
             minLength={6}
+            maxLength={6}
+            value={password}
+            onChange={handlePinChange}
+            onKeyPress={(e) => {
+              if (!/[0-9]/.test(e.key)) {
+                e.preventDefault()
+              }
+            }}
             disabled={isSubmitting}
           />
           <Button
@@ -101,16 +124,25 @@ export function CarrierCreatePassword({ onPasswordCreated, phoneNumber }: Carrie
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="confirm-password">Confirm Password</Label>
+        <Label htmlFor="confirm-password">Confirm PIN</Label>
         <div className="relative">
           <Input
             id="confirm-password"
             type={showPassword ? "text" : "password"}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            inputMode="numeric"
+            placeholder="Confirm 6-digit PIN"
             className="pr-10"
             required
+            pattern="[0-9]{6}"
             minLength={6}
+            maxLength={6}
+            value={confirmPassword}
+            onChange={handleConfirmPinChange}
+            onKeyPress={(e) => {
+              if (!/[0-9]/.test(e.key)) {
+                e.preventDefault()
+              }
+            }}
             disabled={isSubmitting}
           />
           <Button
@@ -125,7 +157,11 @@ export function CarrierCreatePassword({ onPasswordCreated, phoneNumber }: Carrie
           </Button>
         </div>
       </div>
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={isSubmitting || password !== confirmPassword || password.length !== 6}
+      >
         {isSubmitting ? "Creating Account..." : "Create Account"}
       </Button>
     </form>

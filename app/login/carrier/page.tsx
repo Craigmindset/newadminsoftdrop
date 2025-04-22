@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import { authenticateSender } from "@/app/actions/sender-auth"
 
 export default function CarrierLoginPage() {
   const [showPin, setShowPin] = useState(false)
@@ -54,10 +55,16 @@ export default function CarrierLoginPage() {
 
     try {
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
       // In a real app, you would validate credentials with your backend
       // For demonstration purposes, let's consider any login successful
+      const formattedPhone = `+234${phoneNumber.substring(1)}`
+      const result = await authenticateSender(formattedPhone, pin)
+
+      if (!result.success) {
+        setError(result.error || "Authentication failed")
+        return
+      }
+
       console.log("Login successful, redirecting to carrier dashboard...")
       router.push("/carrier/dashboard")
     } catch (error) {

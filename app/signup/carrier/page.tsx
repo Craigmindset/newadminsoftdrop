@@ -33,7 +33,6 @@ export default function CarrierSignupPage() {
   }
 
   const handlePasswordCreated = () => {
-    // In a real app, you would save the user data to the database here
     router.push("/signup/carrier/kyc")
   }
 
@@ -83,7 +82,7 @@ export default function CarrierSignupPage() {
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-center text-sm">
             Already have an account?{" "}
-            <Link href="/login" className="underline">
+            <Link href="/login/carrier" className="underline">
               Login
             </Link>
           </div>
