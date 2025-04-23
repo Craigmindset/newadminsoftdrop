@@ -6,24 +6,13 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input, Textarea } from "@/components/ui/textarea"
-import type { ProfileFormData } from "@/app/actions/update-profile"
+import type { ProfileFormData, SenderProfile } from "@/app/actions/update-profile"
 import { Loader2 } from "lucide-react"
 import MobileImageUpload from "./mobile-image-upload"
 import { isMobileDevice } from "@/lib/mobile-image-utils"
 import useNotifications from "@/hooks/use-notifications"
-import { cookies } from "next/headers"
 import { useFormState, useFormStatus } from "react-dom"
 import { updateProfile } from "@/app/actions/profile"
-
-type SenderProfile = {
-  id?: string
-  user_id: string
-  phone_number: string
-  full_name?: string
-  email?: string
-  address?: string
-  profile_image_url?: string
-}
 
 interface ProfileFormProps {
   initialData: SenderProfile | null
@@ -60,7 +49,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [success, setSuccess] = useState(false)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
-  const [phoneNumber, setPhoneNumber] = useState("")
+  const [phoneNumber, setPhoneNumber] = useState(initialData?.phone_number || "")
   const [carriageType, setCarriageType] = useState("")
   const [registeredNumber, setRegisteredNumber] = useState("")
   const [registrantName, setRegistrantName] = useState("")
@@ -86,23 +75,6 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     if (storedRegistrantName) setRegistrantName(storedRegistrantName)
     if (storedColor) setColor(storedColor)
     if (storedModel) setModel(storedModel)
-  }, [])
-
-  // Load phone number from session cookie
-  useEffect(() => {
-    const getPhoneNumberFromSession = async () => {
-      const sessionCookie = cookies().get("sb-session")
-      if (sessionCookie?.value) {
-        try {
-          const session = JSON.parse(sessionCookie.value)
-          setPhoneNumber(session.phoneNumber || "")
-        } catch (error) {
-          console.error("Failed to parse session cookie:", error)
-        }
-      }
-    }
-
-    getPhoneNumberFromSession()
   }, [])
 
   const handleImageSelect = (file: File | Blob) => {
