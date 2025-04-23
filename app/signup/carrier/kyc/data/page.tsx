@@ -42,6 +42,14 @@ export default function CarrierDataPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Store carriage information in local storage
+    localStorage.setItem("carriageType", carriageType)
+    localStorage.setItem("registeredNumber", registeredNumber)
+    localStorage.setItem("registrantName", registrantName)
+    localStorage.setItem("color", color)
+    localStorage.setItem("model", model)
+
     router.push("/signup/carrier/kyc/processing")
   }
 

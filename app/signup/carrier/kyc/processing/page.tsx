@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 export default function ProcessingPage() {
   const router = useRouter()
-  const [secondsLeft, setSecondsLeft] = useState(120) // 2 minutes
+  const [secondsLeft, setSecondsLeft] = useState(60) // 1 minutes
   const [isVerified, setIsVerified] = useState(false)
 
   // Countdown timer
@@ -59,8 +59,7 @@ export default function ProcessingPage() {
           {isVerified ? (
             <div className="space-y-4">
               <p>
-                You are now a verified carrier on SoftDrop You can start accepting delivery requests and earning
-                money.
+                You are now a verified carrier on SoftDrop You can start accepting delivery requests and earning money.
               </p>
 
               <div className="rounded-lg bg-primary/10 p-4">

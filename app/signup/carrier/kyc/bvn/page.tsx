@@ -12,6 +12,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 
+// Mock BVN data that would normally come from an API
+const mockBvnData = {
+  firstName: "John",
+  lastName: "Doe",
+  dateOfBirth: "1990-05-15",
+}
+
 export default function BvnVerificationPage() {
   const router = useRouter()
   const [bvn, setBvn] = useState("")
@@ -24,6 +31,9 @@ export default function BvnVerificationPage() {
     // In a real app, you would verify the BVN with an API call
     setTimeout(() => {
       setIsLoading(false)
+      // Store BVN data in local storage
+      localStorage.setItem("firstName", mockBvnData.firstName)
+      localStorage.setItem("lastName", mockBvnData.lastName)
       router.push("/signup/carrier/kyc/face")
     }, 1500)
   }

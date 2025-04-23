@@ -14,24 +14,32 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/components/ui/use-toast"
 
-// Mock user data - in a real app, this would come from your API or auth provider
-const mockUserData = {
-  firstName: "Sarah",
-  lastName: "Johnson",
-  phoneNumber: "+234 812 345 6789",
-  email: "sarah.johnson@example.com",
-  profileImage: null,
-  vehicleType: "Car",
-  vehiclePlate: "LND 123 XY",
-}
-
+// Update the useState hook to retrieve the first name and last name from local storage
 export default function CarrierProfilePage() {
   const { toast } = useToast()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [userData, setUserData] = useState(mockUserData)
-  const [formData, setFormData] = useState(mockUserData)
+  const [firstName, setFirstName] = useState(localStorage.getItem("firstName") || "")
+  const [lastName, setLastName] = useState(localStorage.getItem("lastName") || "")
+  const [userData, setUserData] = useState({
+    firstName: firstName,
+    lastName: lastName,
+    phoneNumber: "+234 812 345 6789",
+    email: "sarah.johnson@example.com",
+    profileImage: null,
+    vehicleType: "Car",
+    vehiclePlate: "LND 123 XY",
+  })
+  const [formData, setFormData] = useState({
+    firstName: firstName,
+    lastName: lastName,
+    phoneNumber: "+234 812 345 6789",
+    email: "sarah.johnson@example.com",
+    profileImage: null,
+    vehicleType: "Car",
+    vehiclePlate: "LND 123 XY",
+  })
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -47,8 +55,24 @@ export default function CarrierProfilePage() {
         await new Promise((resolve) => setTimeout(resolve, 500))
 
         // Set the user data
-        setUserData(mockUserData)
-        setFormData(mockUserData)
+        setUserData({
+          firstName: firstName,
+          lastName: lastName,
+          phoneNumber: "+234 812 345 6789",
+          email: "sarah.johnson@example.com",
+          profileImage: null,
+          vehicleType: "Car",
+          vehiclePlate: "LND 123 XY",
+        })
+        setFormData({
+          firstName: firstName,
+          lastName: lastName,
+          phoneNumber: "+234 812 345 6789",
+          email: "sarah.johnson@example.com",
+          profileImage: null,
+          vehicleType: "Car",
+          vehiclePlate: "LND 123 XY",
+        })
       } catch (error) {
         console.error("Error fetching user data:", error)
         setError("Failed to load profile data. Please try again.")
@@ -56,7 +80,7 @@ export default function CarrierProfilePage() {
     }
 
     fetchUserData()
-  }, [])
+  }, [firstName, lastName])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -64,6 +88,14 @@ export default function CarrierProfilePage() {
       ...prev,
       [name]: value,
     }))
+    if (name === "firstName") {
+      setFirstName(value)
+      localStorage.setItem("firstName", value)
+    }
+    if (name === "lastName") {
+      setLastName(value)
+      localStorage.setItem("lastName", value)
+    }
   }
 
   const handleImageClick = () => {
@@ -186,6 +218,7 @@ export default function CarrierProfilePage() {
                       value={formData.firstName}
                       onChange={handleInputChange}
                       required
+                      disabled
                     />
                   </div>
 
@@ -198,6 +231,7 @@ export default function CarrierProfilePage() {
                       value={formData.lastName}
                       onChange={handleInputChange}
                       required
+                      disabled
                     />
                   </div>
                 </div>
