@@ -108,7 +108,7 @@ function logError(message: string, error: any, userId?: string, context?: string
   return errorDetails
 }
 
-export async function updateSenderProfile(prevState: any, formData: FormData): Promise<ProfileUpdateResult> {
+export async function updateSenderProfile(formData: ProfileFormData): Promise<ProfileUpdateResult> {
   const timestamp = new Date().toISOString()
   let userId: string | undefined
   let context = "initializing"
@@ -353,7 +353,6 @@ export async function getSenderProfile(): Promise<SenderProfile | null> {
   const timestamp = new Date().toISOString()
   let userId: string | undefined
   let context = "initializing"
-  let phoneNumber: string | undefined
 
   try {
     // Get the session from cookies
@@ -372,7 +371,6 @@ export async function getSenderProfile(): Promise<SenderProfile | null> {
     }
 
     userId = session.userId
-    phoneNumber = session.phoneNumber
     if (!userId) {
       return null
     }

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
+import { signUpCarrier } from "@/app/actions/carrier-auth"
 
 interface CarrierCreatePasswordProps {
   onPasswordCreated: () => void
@@ -70,12 +71,21 @@ export function CarrierCreatePassword({ onPasswordCreated, phoneNumber }: Carrie
     setIsSubmitting(true)
 
     try {
-      // Simulate successful password creation
-      toast({
-        title: "Success",
-        description: "Password created successfully!",
-      })
-      onPasswordCreated()
+      const result = await signUpCarrier(phoneNumber, password)
+
+      if (result.success) {
+        toast({
+          title: "Congratulations!",
+          description: "You have successfully registered.",
+        })
+        onPasswordCreated()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to create account.",
+          variant: "destructive",
+        })
+      }
     } catch (error) {
       toast({
         title: "Error",
