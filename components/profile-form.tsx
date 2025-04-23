@@ -7,13 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label, Textarea } from "@/components/ui/textarea"
-import { updateSenderProfile, type ProfileFormData } from "@/app/actions/update-profile"
-import { uploadProfileImage } from "@/app/actions/upload-image"
+import type { ProfileFormData } from "@/app/actions/update-profile"
 import { Loader2 } from "lucide-react"
 import MobileImageUpload from "./mobile-image-upload"
 import { isMobileDevice } from "@/lib/mobile-image-utils"
 import useNotifications from "@/hooks/use-notifications"
 import { cookies } from "next/headers"
+import { useFormState, useFormStatus } from "react-dom"
+import { updateProfile } from "@/app/actions/profile"
 
 type SenderProfile = {
   id?: string
@@ -29,8 +30,24 @@ interface ProfileFormProps {
   initialData: SenderProfile | null
 }
 
+function SubmitButton() {
+  const { pending } = useFormStatus()
+
+  return (
+    <Button type="submit" disabled={pending} className="w-full md:w-auto">
+      {pending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Updating...
+        </>
+      ) : (
+        "Update Profile"
+      )}
+    </Button>
+  )
+}
+
 export default function ProfileForm({ initialData }: ProfileFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [profileImage, setProfileImage] = useState<string | null>(initialData?.profile_image_url || null)
   const [imageFile, setImageFile] = useState<File | Blob | null>(null)
@@ -50,6 +67,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [registrantName, setRegistrantName] = useState("")
   const [color, setColor] = useState("")
   const [model, setModel] = useState("")
+  const [state, formAction] = useFormState(updateProfile, { success: false })
 
   // Load first name and last name from local storage
   useEffect(() => {
@@ -117,110 +135,73 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     setImageFile(null)
   }
 
-  const handleImageUpload = async () => {
-    if (!imageFile) return
-
-    setIsUploading(true)
-
-    try {
-      const formData = new FormData()
-      formData.append("file", imageFile)
-
-      // Log upload attempt
-      console.log(
-        `[Client] Uploading image: ${imageFile instanceof File ? imageFile.name : "Blob"}, size: ${imageFile.size} bytes, type: ${imageFile.type}`,
-      )
-
-      const result = await uploadProfileImage(formData)
-
-      if (result.success) {
-        setProfileImage(result.url || null)
-        addNotification({
-          title: "Image Uploaded",
-          description: "Your profile image has been updated successfully.",
-          type: "success",
-        })
-
-        // Log success details
-        console.log("[Client] Upload successful:", result.details)
-      } else {
-        addNotification({
-          title: "Upload Failed",
-          description: result.error || "Failed to upload image. Please try again.",
-          type: "error",
-        })
-      }
-    } catch (error) {
-      console.error("[Client] Exception during upload:", error)
-
-      addNotification({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
-        type: "error",
-      })
-    } finally {
-      setIsUploading(false)
-    }
-  }
-
   const handleSubmit = async (e: React.Event) => {
     e.preventDefault()
-    setIsSubmitting(true)
+    //setIsSubmitting(true)
 
-    try {
-      // Upload image first if there's a new image
-      if (imageFile) {
-        await handleImageUpload()
-      }
+    // try {
+    //   // Upload image first if there's a new image
+    //   if (imageFile) {
+    //     await handleImageUpload()
+    //   }
 
-      // Log client-side submission attempt
-      console.log(`[${new Date().toISOString()}] Profile update submission attempt`, {
-        environment: process.env.NODE_ENV,
-      })
+    //   // Log client-side submission attempt
+    //   console.log(`[${new Date().toISOString()}] Profile update submission attempt`, {
+    //     environment: process.env.NODE_ENV,
+    //   })
 
-      const result = await updateSenderProfile(formData)
+    //   const result = await updateSenderProfile(formData)
 
-      if (result.success) {
-        setSuccess(true)
-        addNotification({
-          title: "Profile Updated",
-          description: "Your profile information has been updated successfully.",
-          type: "success",
-        })
-      } else {
-        addNotification({
-          title: "Update Failed",
-          description: result.error || "Failed to update profile. Please try again.",
-          type: "error",
-        })
-      }
-    } catch (error) {
-      // Handle unexpected client-side errors
-      console.error("Profile form submission error:", error)
+    //   if (result.success) {
+    //     setSuccess(true)
+    //     addNotification({
+    //       title: "Profile Updated",
+    //       description: "Your profile information has been updated successfully.",
+    //       type: "success",
+    //     })
+    //   } else {
+    //     addNotification({
+    //       title: "Update Failed",
+    //       description: result.error || "Failed to update profile. Please try again.",
+    //       type: "error",
+    //     })
+    //   }
+    // } catch (error) {
+    //   // Handle unexpected client-side errors
+    //   console.error("Profile form submission error:", error)
 
-      // Log detailed error information
-      const errorInfo = {
-        timestamp: new Date().toISOString(),
-        error:
-          error instanceof Error
-            ? {
-                name: error.name,
-                message: error.message,
-                stack: error.stack,
-              }
-            : String(error),
-        environment: process.env.NODE_ENV,
-      }
-      console.error("Client-side error details:", errorInfo)
+    //   // Log detailed error information
+    //   const errorInfo = {
+    //     timestamp: new Date().toISOString(),
+    //     error:
+    //       error instanceof Error
+    //         ? {
+    //             name: error.name,
+    //             message: error.message,
+    //             stack: error.stack,
+    //           }
+    //         : String(error),
+    //     environment: process.env.NODE_ENV,
+    //   }
+    //   console.error("Client-side error details:", errorInfo)
 
-      addNotification({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
-        type: "error",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
+    //   addNotification({
+    //     title: "Error",
+    //     description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
+    //     type: "error",
+    //   })
+    // } finally {
+    //   setIsSubmitting(false)
+    // }
+  }
+
+  const hasChanges = () => {
+    return (
+      formData.fullName !== initialData?.full_name ||
+      formData.email !== initialData?.email ||
+      formData.address !== initialData?.address ||
+      profileImage !== initialData?.profile_image_url
+    )
   }
 
   return (
@@ -231,23 +212,19 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
           <CardDescription>Update your personal details</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form action={formAction} className="space-y-6">
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="fullName">Full Name</Label>
                   <Input
-                    id="firstName"
-                    name="firstName"
-                    placeholder="Enter your first name"
-                    value={firstName}
-                    disabled
+                    id="fullName"
+                    name="fullName"
+                    placeholder="Enter your full name"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    required
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" name="lastName" placeholder="Enter your last name" value={lastName} disabled />
                 </div>
               </div>
 
@@ -334,16 +311,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
             </div>
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  "Update Profile"
-                )}
-              </Button>
+              <SubmitButton />
             </div>
           </form>
         </CardContent>
