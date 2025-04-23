@@ -1,26 +1,7 @@
 "use server"
-
 import { cookies } from "next/headers"
 import { getSupabaseServer } from "@/lib/supabase-server"
 import { redirect } from "next/navigation"
-
-/**
- * Format phone number to international format for authentication
- */
-function formatPhoneNumber(phone: string): string {
-  // Remove any non-digit characters
-  let cleanPhone = phone.replace(/\D/g, "")
-
-  // Ensure it starts with country code (234 for Nigeria)
-  if (cleanPhone.startsWith("0")) {
-    cleanPhone = "234" + cleanPhone.substring(1)
-  } else if (!cleanPhone.startsWith("234")) {
-    cleanPhone = "234" + cleanPhone
-  }
-
-  // Add the plus sign for international format
-  return "+" + cleanPhone
-}
 
 /**
  * Authenticate a sender with phone number and PIN
@@ -37,7 +18,7 @@ export async function authenticateSender(phoneNumber: string, pin: string) {
 
     // Sign in with phone and password (PIN)
     const { data, error } = await supabase.auth.signInWithPassword({
-      phone: formattedPhone, // Use phone parameter instead of email
+      email: `${phoneNumber.replace(/\+/g, "")}@softdrop.phone`, // Use email parameter instead of phone
       password: pin,
     })
 

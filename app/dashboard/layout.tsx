@@ -1,13 +1,13 @@
 import type React from "react"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
+import { checkSenderSession } from "@/app/actions/sender-auth"
 import { redirect } from "next/navigation"
+import { getSenderProfile } from "@/app/actions/update-profile"
 import { ProfileProvider } from "@/context/profile-context"
 
 // Create a separate client component for the Toaster
 import { ClientToaster } from "@/components/client-toaster"
-import { getSenderProfile } from "@/app/actions/update-profile"
-import { checkSenderSession } from "@/app/actions/sender-auth"
 
 export default async function DashboardLayout({
   children,
