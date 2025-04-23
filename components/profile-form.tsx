@@ -1,12 +1,11 @@
 "use client"
 
-import type React from "react"
+import { Label } from "@/components/ui/label"
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label, Textarea } from "@/components/ui/textarea"
+import { Input, Textarea } from "@/components/ui/textarea"
 import type { ProfileFormData } from "@/app/actions/update-profile"
 import { Loader2 } from "lucide-react"
 import MobileImageUpload from "./mobile-image-upload"
@@ -106,26 +105,6 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     getPhoneNumberFromSession()
   }, [])
 
-  // Reset form data if initialData changes
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        fullName: initialData.full_name || "",
-        email: initialData.email || "",
-        address: initialData.address || "",
-      })
-      setProfileImage(initialData.profile_image_url || null)
-    }
-  }, [initialData])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
-
   const handleImageSelect = (file: File | Blob) => {
     setImageFile(file)
   }
@@ -133,75 +112,6 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const handleImageRemove = () => {
     setProfileImage(null)
     setImageFile(null)
-  }
-
-  const handleSubmit = async (e: React.Event) => {
-    e.preventDefault()
-    //setIsSubmitting(true)
-
-    // try {
-    //   // Upload image first if there's a new image
-    //   if (imageFile) {
-    //     await handleImageUpload()
-    //   }
-
-    //   // Log client-side submission attempt
-    //   console.log(`[${new Date().toISOString()}] Profile update submission attempt`, {
-    //     environment: process.env.NODE_ENV,
-    //   })
-
-    //   const result = await updateSenderProfile(formData)
-
-    //   if (result.success) {
-    //     setSuccess(true)
-    //     addNotification({
-    //       title: "Profile Updated",
-    //       description: "Your profile information has been updated successfully.",
-    //       type: "success",
-    //     })
-    //   } else {
-    //     addNotification({
-    //       title: "Update Failed",
-    //       description: result.error || "Failed to update profile. Please try again.",
-    //       type: "error",
-    //     })
-    //   }
-    // } catch (error) {
-    //   // Handle unexpected client-side errors
-    //   console.error("Profile form submission error:", error)
-
-    //   // Log detailed error information
-    //   const errorInfo = {
-    //     timestamp: new Date().toISOString(),
-    //     error:
-    //       error instanceof Error
-    //         ? {
-    //             name: error.name,
-    //             message: error.message,
-    //             stack: error.stack,
-    //           }
-    //         : String(error),
-    //     environment: process.env.NODE_ENV,
-    //   }
-    //   console.error("Client-side error details:", errorInfo)
-
-    //   addNotification({
-    //     title: "Error",
-    //     description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
-    //     type: "error",
-    //   })
-    // } finally {
-    //   setIsSubmitting(false)
-    // }
-  }
-
-  const hasChanges = () => {
-    return (
-      formData.fullName !== initialData?.full_name ||
-      formData.email !== initialData?.email ||
-      formData.address !== initialData?.address ||
-      profileImage !== initialData?.profile_image_url
-    )
   }
 
   return (
@@ -216,21 +126,25 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="firstName">First Name</Label>
                   <Input
-                    id="fullName"
-                    name="fullName"
-                    placeholder="Enter your full name"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    required
+                    id="firstName"
+                    name="firstName"
+                    placeholder="Enter your first name"
+                    value={firstName}
+                    disabled
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input id="lastName" name="lastName" placeholder="Enter your last name" value={lastName} disabled />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="phoneNumber">Phone Number</Label>
-                <Input id="phoneNumber" value={phoneNumber} disabled className="bg-muted/50" />
+                <Input id="phoneNumber" name="phoneNumber" value={phoneNumber} disabled className="bg-muted/50" />
                 <p className="text-xs text-muted-foreground">
                   This is the phone number you used to register. It cannot be changed.
                 </p>
@@ -243,8 +157,8 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
                   name="email"
                   type="email"
                   placeholder="Enter your email address"
-                  value={formData.email}
-                  onChange={handleChange}
+                  defaultValue={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
 
@@ -254,8 +168,8 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
                   id="address"
                   name="address"
                   placeholder="Enter your address"
-                  value={formData.address}
-                  onChange={handleChange}
+                  defaultValue={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   rows={3}
                 />
               </div>
