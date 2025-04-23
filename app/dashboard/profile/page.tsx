@@ -1,5 +1,5 @@
 import { getSenderProfile } from "@/app/actions/update-profile"
-import ProfileForm from "@/components/profile-form"
+import ProfileForm from "@/app/components/profile-form"
 import { cookies } from "next/headers"
 
 export default async function ProfilePage() {
