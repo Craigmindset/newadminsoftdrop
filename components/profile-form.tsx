@@ -15,7 +15,7 @@ import useNotifications from "@/hooks/use-notifications"
 
 import { useFormState, useFormStatus } from "react-dom"
 import { updateProfile } from "@/app/actions/profile"
-import { cookies } from "next/headers"
+
 
 type SenderProfile = {
   id?: string
