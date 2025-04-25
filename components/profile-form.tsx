@@ -16,7 +16,6 @@ import useNotifications from "@/hooks/use-notifications"
 import { useFormState, useFormStatus } from "react-dom"
 import { updateProfile } from "@/app/actions/profile"
 
-
 type SenderProfile = {
   id?: string
   user_id: string
@@ -29,21 +28,26 @@ type SenderProfile = {
 
 interface ProfileFormProps {
   initialData: SenderProfile | null
-  userId: string
 }
 
 function SubmitButton() {
   const { pending } = useFormStatus()
 
   return (
-    <Button type="submit" aria-disabled={pending}>
-      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      Save Changes
+    <Button type="submit" disabled={pending} className="w-full md:w-auto">
+      {pending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Updating...
+        </>
+      ) : (
+        "Update Profile"
+      )}
     </Button>
   )
 }
 
-export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
+export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [profileImage, setProfileImage] = useState<string | null>(initialData?.profile_image_url || null)
   const [imageFile, setImageFile] = useState<File | Blob | null>(null)
