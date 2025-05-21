@@ -83,12 +83,6 @@ export default function AdminLogin() {
             </button>
           </div>
         </form>
-
-        <div className="mt-4 text-center">
-          <a href="/" className="text-sm text-gray-600 hover:text-black transition-colors">
-            ← Back to Home
-          </a>
-        </div>
       </div>
     </div>
   )
