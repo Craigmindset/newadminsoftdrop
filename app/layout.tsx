@@ -1,30 +1,20 @@
-import type React from "react"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { Toaster } from "@/components/ui/toaster"
-import ClientToaster from "@/components/client-toaster"
+import type { Metadata } from 'next'
+import './globals.css'
 
-const inter = Inter({ subsets: ["latin"] })
-
-export const metadata = {
-  title: "Softdropweb",
-  description: "Fast and reliable logistics solutions for your delivery needs",
-  manifest: "/site.webmanifest",
-    generator: 'v0.dev'
+export const metadata: Metadata = {
+  title: 'v0 App',
+  description: 'Created with v0',
+  generator: 'v0.dev',
 }
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        {children}
-        <Toaster />
-        <ClientToaster />
-      </body>
+      <body>{children}</body>
     </html>
   )
 }

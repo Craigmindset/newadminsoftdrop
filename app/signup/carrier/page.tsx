@@ -33,7 +33,7 @@ export default function CarrierSignupPage() {
   }
 
   const handlePasswordCreated = () => {
-    router.push("/login/carrier")
+    router.push("/signup/carrier/kyc")
   }
 
   return (

@@ -12,7 +12,7 @@ import { Loader2 } from "lucide-react"
 import MobileImageUpload from "./mobile-image-upload"
 import { isMobileDevice } from "@/lib/mobile-image-utils"
 import useNotifications from "@/hooks/use-notifications"
-
+import { cookies } from "next/headers"
 import { useFormState, useFormStatus } from "react-dom"
 import { updateProfile } from "@/app/actions/profile"
 

@@ -1,17 +1,13 @@
 "use client"
 
-import { Toaster } from "@/components/ui/toaster"
 import { usePathname } from "next/navigation"
+import { Toaster } from "@/components/ui/toaster"
 
-export default function ClientToaster() {
+export function ClientToaster() {
   const pathname = usePathname()
 
   // Don't render Toaster on any dashboard pages
-  if (
-    pathname?.startsWith("/dashboard") ||
-    pathname?.startsWith("/carrier/dashboard") ||
-    pathname?.startsWith("/admin/dashboard")
-  ) {
+  if (pathname?.startsWith("/dashboard")) {
     return null
   }
 

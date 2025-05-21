@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Camera, Loader2, Check, X } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +13,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/components/ui/use-toast"
-import { useEffect } from "react"
 
 // Update the useState hook to retrieve the first name and last name from local storage
 export default function CarrierProfilePage() {
@@ -21,8 +20,8 @@ export default function CarrierProfilePage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
+  const [firstName, setFirstName] = useState(localStorage.getItem("firstName") || "")
+  const [lastName, setLastName] = useState(localStorage.getItem("lastName") || "")
   const [userData, setUserData] = useState({
     firstName: firstName,
     lastName: lastName,
@@ -46,14 +45,6 @@ export default function CarrierProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-
-  // Move the localStorage access inside a useEffect hook
-  useEffect(() => {
-    const storedFirstName = localStorage.getItem("firstName") || ""
-    const storedLastName = localStorage.getItem("lastName") || ""
-    setFirstName(storedFirstName)
-    setLastName(storedLastName)
-  }, [])
 
   // Simulate fetching user data
   useEffect(() => {
