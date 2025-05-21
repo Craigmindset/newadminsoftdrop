@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getSupabaseApi } from "@/lib/supabase-api"
+import { getSupabaseAdmin } from "@/lib/supabase-client"
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params
@@ -7,7 +7,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const userType = searchParams.get("type") === "carrier" ? "carrier" : "sender"
 
   try {
-    const supabase = getSupabaseApi()
+    const supabase = getSupabaseAdmin()
     const tableName = userType === "carrier" ? "carrier_profiles" : "sender_profiles"
 
     const { data: user, error } = await supabase

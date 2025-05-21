@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getSupabaseApi } from "@/lib/supabase-api"
+import { getSupabaseAdmin } from "@/lib/supabase-client"
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    const supabase = getSupabaseApi()
+    const supabase = getSupabaseAdmin()
     const tableName = userType === "sender" ? "sender_profiles" : "carrier_profiles"
 
     const { error } = await supabase

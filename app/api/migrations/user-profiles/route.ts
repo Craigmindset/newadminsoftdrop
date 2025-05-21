@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
-import { getSupabaseApi } from "@/lib/supabase-api"
+import { getSupabaseAdmin } from "@/lib/supabase-client"
 
 export async function GET() {
   try {
-    const supabase = getSupabaseApi()
+    const supabase = getSupabaseAdmin()
 
     // Define the migration SQL inline
     const migrationSQL = `

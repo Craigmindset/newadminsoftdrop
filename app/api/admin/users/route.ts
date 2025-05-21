@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getSupabaseApi } from "@/lib/supabase-api"
+import { getSupabaseAdmin } from "@/lib/supabase-client"
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search") || ""
   const offset = (page - 1) * limit
 
-  const supabase = getSupabaseApi()
+  const supabase = getSupabaseAdmin()
 
   try {
     let senderProfiles: any[] = []
