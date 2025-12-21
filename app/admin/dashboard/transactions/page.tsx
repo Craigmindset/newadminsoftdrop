@@ -1,16 +1,37 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { ArrowDownUp, Calendar, CreditCard, Download, Eye, Filter, Search, TrendingUp } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowDownUp,
+  Calendar,
+  CreditCard,
+  Download,
+  Eye,
+  Filter,
+  Search,
+  TrendingUp,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 
 // Mock transaction data
 const mockTransactions = [
@@ -168,16 +189,27 @@ const mockTransactions = [
     paymentMethod: "wallet",
     itemType: "document",
   },
-]
+];
 
 // Calculate financial metrics
 const calculateMetrics = (transactions: typeof mockTransactions) => {
-  const totalTransactions = transactions.length
-  const totalAmount = transactions.reduce((sum, trx) => sum + trx.amount, 0)
-  const totalCommission = transactions.reduce((sum, trx) => sum + trx.commission, 0)
-  const completedTransactions = transactions.filter((trx) => trx.status === "completed")
-  const completedAmount = completedTransactions.reduce((sum, trx) => sum + trx.amount, 0)
-  const completedCommission = completedTransactions.reduce((sum, trx) => sum + trx.commission, 0)
+  const totalTransactions = transactions.length;
+  const totalAmount = transactions.reduce((sum, trx) => sum + trx.amount, 0);
+  const totalCommission = transactions.reduce(
+    (sum, trx) => sum + trx.commission,
+    0
+  );
+  const completedTransactions = transactions.filter(
+    (trx) => trx.status === "completed"
+  );
+  const completedAmount = completedTransactions.reduce(
+    (sum, trx) => sum + trx.amount,
+    0
+  );
+  const completedCommission = completedTransactions.reduce(
+    (sum, trx) => sum + trx.commission,
+    0
+  );
 
   return {
     totalTransactions,
@@ -186,110 +218,148 @@ const calculateMetrics = (transactions: typeof mockTransactions) => {
     completedTransactions: completedTransactions.length,
     completedAmount,
     completedCommission,
-    averageTransaction: totalTransactions > 0 ? totalAmount / totalTransactions : 0,
-    averageCommission: totalTransactions > 0 ? totalCommission / totalTransactions : 0,
-  }
-}
+    averageTransaction:
+      totalTransactions > 0 ? totalAmount / totalTransactions : 0,
+    averageCommission:
+      totalTransactions > 0 ? totalCommission / totalTransactions : 0,
+  };
+};
 
 export default function TransactionsPage() {
-  const router = useRouter()
-  const [transactionType, setTransactionType] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [timeframe, setTimeframe] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const router = useRouter();
+  const [transactionType, setTransactionType] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [timeframe, setTimeframe] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // Filter transactions based on filters
   const filteredTransactions = mockTransactions.filter((transaction) => {
-    const matchesType = transactionType === "all" || transaction.type === transactionType
-    const matchesStatus = statusFilter === "all" || transaction.status === statusFilter
+    const matchesType =
+      transactionType === "all" || transaction.type === transactionType;
+    const matchesStatus =
+      statusFilter === "all" || transaction.status === statusFilter;
     const matchesSearch =
       transaction.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.sender.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.carrier.name.toLowerCase().includes(searchQuery.toLowerCase())
+      transaction.sender.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      transaction.carrier.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
 
     // Simple timeframe filter (in a real app, you'd use proper date filtering)
-    let matchesTimeframe = true
+    let matchesTimeframe = true;
     if (timeframe === "today") {
-      matchesTimeframe = new Date(transaction.date).toDateString() === new Date().toDateString()
+      matchesTimeframe =
+        new Date(transaction.date).toDateString() === new Date().toDateString();
     } else if (timeframe === "week") {
-      const now = new Date()
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      matchesTimeframe = new Date(transaction.date) >= weekAgo
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      matchesTimeframe = new Date(transaction.date) >= weekAgo;
     } else if (timeframe === "month") {
-      const now = new Date()
-      const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
-      matchesTimeframe = new Date(transaction.date) >= monthAgo
+      const now = new Date();
+      const monthAgo = new Date(
+        now.getFullYear(),
+        now.getMonth() - 1,
+        now.getDate()
+      );
+      matchesTimeframe = new Date(transaction.date) >= monthAgo;
     }
 
-    return matchesType && matchesStatus && matchesSearch && matchesTimeframe
-  })
+    return matchesType && matchesStatus && matchesSearch && matchesTimeframe;
+  });
 
   // Calculate metrics for filtered transactions
-  const metrics = calculateMetrics(filteredTransactions)
+  const metrics = calculateMetrics(filteredTransactions);
 
   const handleViewTransaction = (id: string) => {
-    router.push(`/admin/dashboard/transactions/${id}`)
-  }
+    router.push(`/admin/dashboard/transactions/${id}`);
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
-        <p className="text-gray-500">Manage and monitor all platform transactions</p>
+        <p className="text-gray-500">
+          Manage and monitor all platform transactions
+        </p>
       </div>
 
       {/* Financial Summary */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Transactions
+            </CardTitle>
             <CreditCard className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.totalTransactions}</div>
-            <p className="text-xs text-gray-500">{metrics.completedTransactions} completed</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Transaction Volume</CardTitle>
-            <ArrowDownUp className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₦{metrics.totalAmount.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {metrics.totalTransactions}
+            </div>
             <p className="text-xs text-gray-500">
-              Avg: ₦{Math.round(metrics.averageTransaction).toLocaleString()} per transaction
+              {metrics.completedTransactions} completed
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Commission</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Transaction Volume
+            </CardTitle>
+            <ArrowDownUp className="h-4 w-4 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ₦{metrics.totalAmount.toLocaleString()}
+            </div>
+            <p className="text-xs text-gray-500">
+              Avg: ₦{Math.round(metrics.averageTransaction).toLocaleString()}{" "}
+              per transaction
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Commission
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{metrics.totalCommission.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ₦{metrics.totalCommission.toLocaleString()}
+            </div>
             <p className="text-xs text-gray-500">5% of transaction volume</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Commission</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Average Commission
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{Math.round(metrics.averageCommission).toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ₦{Math.round(metrics.averageCommission).toLocaleString()}
+            </div>
             <p className="text-xs text-gray-500">Per transaction</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <Tabs defaultValue="all" className="w-[300px]" onValueChange={setTransactionType}>
+      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+        <Tabs
+          defaultValue="all"
+          className="w-full md:w-auto"
+          onValueChange={setTransactionType}
+        >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="all">All Types</TabsTrigger>
             <TabsTrigger value="intracity">Intracity</TabsTrigger>
@@ -353,31 +423,54 @@ export default function TransactionsPage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle>Transaction History</CardTitle>
-          <CardDescription>{filteredTransactions.length} transactions found</CardDescription>
+          <CardDescription>
+            {filteredTransactions.length} transactions found
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-sm">Transaction ID</th>
-                  <th className="text-left py-3 px-4 font-medium text-sm">Date</th>
-                  <th className="text-left py-3 px-4 font-medium text-sm">Sender</th>
-                  <th className="text-left py-3 px-4 font-medium text-sm">Carrier</th>
-                  <th className="text-left py-3 px-4 font-medium text-sm">Amount</th>
-                  <th className="text-left py-3 px-4 font-medium text-sm">Commission (15%)</th>
-                  <th className="text-left py-3 px-4 font-medium text-sm">Status</th>
-                  <th className="text-right py-3 px-4 font-medium text-sm">Actions</th>
+                  <th className="text-left py-3 px-4 font-medium text-sm">
+                    Transaction ID
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-sm">
+                    Date
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-sm">
+                    Sender
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-sm">
+                    Carrier
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-sm">
+                    Amount
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-sm">
+                    Commission (15%)
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-sm">
+                    Status
+                  </th>
+                  <th className="text-right py-3 px-4 font-medium text-sm">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTransactions.map((transaction) => (
-                  <tr key={transaction.id} className="border-b border-gray-100 last:border-0">
+                  <tr
+                    key={transaction.id}
+                    className="border-b border-gray-100 last:border-0"
+                  >
                     <td className="py-3 px-4">
                       <span className="font-medium">{transaction.id}</span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm">{new Date(transaction.date).toLocaleString()}</span>
+                      <span className="text-sm">
+                        {new Date(transaction.date).toLocaleString()}
+                      </span>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
@@ -385,12 +478,18 @@ export default function TransactionsPage() {
                           <AvatarImage
                             src={
                               transaction.sender.avatar ||
-                              `/placeholder.svg?height=24&width=24&text=${transaction.sender.name.charAt(0)}`
+                              `/placeholder.svg?height=24&width=24&text=${transaction.sender.name.charAt(
+                                0
+                              )}`
                             }
                           />
-                          <AvatarFallback>{transaction.sender.name.charAt(0)}</AvatarFallback>
+                          <AvatarFallback>
+                            {transaction.sender.name.charAt(0)}
+                          </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm">{transaction.sender.name}</span>
+                        <span className="text-sm">
+                          {transaction.sender.name}
+                        </span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
@@ -399,16 +498,24 @@ export default function TransactionsPage() {
                           <AvatarImage
                             src={
                               transaction.carrier.avatar ||
-                              `/placeholder.svg?height=24&width=24&text=${transaction.carrier.name.charAt(0)}`
+                              `/placeholder.svg?height=24&width=24&text=${transaction.carrier.name.charAt(
+                                0
+                              )}`
                             }
                           />
-                          <AvatarFallback>{transaction.carrier.name.charAt(0)}</AvatarFallback>
+                          <AvatarFallback>
+                            {transaction.carrier.name.charAt(0)}
+                          </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm">{transaction.carrier.name}</span>
+                        <span className="text-sm">
+                          {transaction.carrier.name}
+                        </span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm font-medium">₦{transaction.amount.toLocaleString()}</span>
+                      <span className="text-sm font-medium">
+                        ₦{transaction.amount.toLocaleString()}
+                      </span>
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm font-medium text-green-600">
@@ -422,13 +529,14 @@ export default function TransactionsPage() {
                           transaction.status === "completed"
                             ? "bg-green-100 text-green-800"
                             : transaction.status === "in-transit"
-                              ? "bg-blue-100 text-blue-800"
-                              : transaction.status === "pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
+                            ? "bg-blue-100 text-blue-800"
+                            : transaction.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
                         }
                       >
-                        {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                        {transaction.status.charAt(0).toUpperCase() +
+                          transaction.status.slice(1)}
                       </Badge>
                     </td>
                     <td className="py-3 px-4 text-right">
@@ -454,23 +562,34 @@ export default function TransactionsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Commission Breakdown</CardTitle>
-          <CardDescription>Analysis of commission earned from transactions</CardDescription>
+          <CardDescription>
+            Analysis of commission earned from transactions
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Completed Transactions</span>
+                  <span className="text-sm font-medium">
+                    Completed Transactions
+                  </span>
                   <span className="text-sm">
-                    {metrics.completedTransactions} / {metrics.totalTransactions}
+                    {metrics.completedTransactions} /{" "}
+                    {metrics.totalTransactions}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-green-500 h-2 rounded-full"
                     style={{
-                      width: `${metrics.totalTransactions > 0 ? (metrics.completedTransactions / metrics.totalTransactions) * 100 : 0}%`,
+                      width: `${
+                        metrics.totalTransactions > 0
+                          ? (metrics.completedTransactions /
+                              metrics.totalTransactions) *
+                            100
+                          : 0
+                      }%`,
                     }}
                   ></div>
                 </div>
@@ -480,14 +599,21 @@ export default function TransactionsPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Commission Earned</span>
                   <span className="text-sm">
-                    ₦{metrics.completedCommission.toLocaleString()} / ₦{metrics.totalCommission.toLocaleString()}
+                    ₦{metrics.completedCommission.toLocaleString()} / ₦
+                    {metrics.totalCommission.toLocaleString()}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-green-500 h-2 rounded-full"
                     style={{
-                      width: `${metrics.totalCommission > 0 ? (metrics.completedCommission / metrics.totalCommission) * 100 : 0}%`,
+                      width: `${
+                        metrics.totalCommission > 0
+                          ? (metrics.completedCommission /
+                              metrics.totalCommission) *
+                            100
+                          : 0
+                      }%`,
                     }}
                   ></div>
                 </div>
@@ -498,9 +624,14 @@ export default function TransactionsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-sm font-medium mb-1">Intracity Transactions</h3>
+                <h3 className="text-sm font-medium mb-1">
+                  Intracity Transactions
+                </h3>
                 <div className="text-2xl font-bold">
-                  {filteredTransactions.filter((t) => t.type === "intracity").length}
+                  {
+                    filteredTransactions.filter((t) => t.type === "intracity")
+                      .length
+                  }
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
                   Commission: ₦
@@ -512,9 +643,14 @@ export default function TransactionsPage() {
               </div>
 
               <div className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-sm font-medium mb-1">Interstate Transactions</h3>
+                <h3 className="text-sm font-medium mb-1">
+                  Interstate Transactions
+                </h3>
                 <div className="text-2xl font-bold">
-                  {filteredTransactions.filter((t) => t.type === "interstate").length}
+                  {
+                    filteredTransactions.filter((t) => t.type === "interstate")
+                      .length
+                  }
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
                   Commission: ₦
@@ -528,12 +664,14 @@ export default function TransactionsPage() {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <h3 className="text-sm font-medium mb-1">Commission Rate</h3>
                 <div className="text-2xl font-bold">5%</div>
-                <p className="text-sm text-gray-500 mt-1">Of total transaction value</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Of total transaction value
+                </p>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
