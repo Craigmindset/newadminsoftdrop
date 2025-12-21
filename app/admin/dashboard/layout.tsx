@@ -1,32 +1,36 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { usePathname, useRouter } from "next/navigation"
+import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   Bell,
   CreditCard,
+  Eye,
+  EyeOff,
   HelpCircle,
   Home,
   LogOut,
   Menu,
   MessageSquare,
+  Radio,
   Settings,
   ShieldAlert,
   Users,
+  Wallet,
   X,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface NavItemProps {
-  href: string
-  icon: React.ReactNode
-  title: string
-  isActive: boolean
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  isActive: boolean;
 }
 
 function NavItem({ href, icon, title, isActive }: NavItemProps) {
@@ -35,46 +39,55 @@ function NavItem({ href, icon, title, isActive }: NavItemProps) {
       href={href}
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 transition-all",
-        isActive ? "bg-black text-white" : "text-gray-500 hover:text-black hover:bg-gray-100",
+        isActive
+          ? "bg-black text-white"
+          : "text-gray-500 hover:text-black hover:bg-gray-100"
       )}
     >
       {icon}
       <span>{title}</span>
     </Link>
-  )
+  );
 }
 
 export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const pathname = usePathname()
-  const router = useRouter()
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [walletVisible, setWalletVisible] = useState(true);
+  const pathname = usePathname();
+  const router = useRouter();
 
   const handleLogout = () => {
     // In a real app, you would handle logout logic here
-    router.push("/admin")
-  }
+    router.push("/admin");
+  };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transition-transform lg:translate-x-0 lg:static lg:z-auto",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transition-transform overflow-y-auto lg:translate-x-0 lg:static lg:z-auto",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between h-16 px-4 border-b">
-            <Link href="/admin/dashboard" className="flex items-center gap-2 font-bold text-xl">
+            <Link
+              href="/admin/dashboard"
+              className="flex items-center gap-2 font-bold text-xl"
+            >
               <Image
                 src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/softDrop-Logo2-jP4n5ZtyHNVWxET8XMOadJAtNMzpD0.png"
                 alt="SoftDrop Logo"
@@ -84,7 +97,10 @@ export default function DashboardLayout({
               />
               <span>Super Admin</span>
             </Link>
-            <button onClick={() => setSidebarOpen(false)} className="p-1 rounded-md hover:bg-gray-100 lg:hidden">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-1 rounded-md hover:bg-gray-100 lg:hidden"
+            >
               <X className="h-6 w-6" />
             </button>
           </div>
@@ -98,23 +114,36 @@ export default function DashboardLayout({
                 isActive={pathname === "/admin/dashboard"}
               />
               <NavItem
-                href="/admin/dashboard/users"
+                href="/admin/dashboard/senders"
                 icon={<Users className="h-5 w-5" />}
-                title="User Management"
-                isActive={pathname === "/admin/dashboard/users"}
+                title="Senders"
+                isActive={
+                  pathname === "/admin/dashboard/senders" ||
+                  pathname.startsWith("/admin/dashboard/senders/")
+                }
+              />
+              <NavItem
+                href="/admin/dashboard/carriers"
+                icon={<Users className="h-5 w-5" />}
+                title="Carriers"
+                isActive={
+                  pathname === "/admin/dashboard/carriers" ||
+                  pathname.startsWith("/admin/dashboard/carriers/")
+                }
               />
               <NavItem
                 href="/admin/dashboard/transactions"
                 icon={<CreditCard className="h-5 w-5" />}
                 title="Transactions"
                 isActive={
-                  pathname === "/admin/dashboard/transactions" || pathname.startsWith("/admin/dashboard/transactions/")
+                  pathname === "/admin/dashboard/transactions" ||
+                  pathname.startsWith("/admin/dashboard/transactions/")
                 }
               />
               <NavItem
                 href="/admin/dashboard/disputes"
                 icon={<ShieldAlert className="h-5 w-5" />}
-                title="Dispute Management"
+                title="Dispute"
                 isActive={pathname === "/admin/dashboard/disputes"}
               />
               <NavItem
@@ -151,12 +180,7 @@ export default function DashboardLayout({
                   title="Settings"
                   isActive={pathname === "/admin/dashboard/settings"}
                 />
-                <NavItem
-                  href="/admin/dashboard/help"
-                  icon={<HelpCircle className="h-5 w-5" />}
-                  title="Help & Documentation"
-                  isActive={pathname === "/admin/dashboard/help"}
-                />
+
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-500 hover:text-black hover:bg-gray-100 w-full text-left"
@@ -173,18 +197,60 @@ export default function DashboardLayout({
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="sticky top-0 z-10 h-16 bg-white border-b border-gray-200 flex items-center px-4 lg:px-6">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-md hover:bg-gray-100 lg:hidden">
-            <Menu className="h-6 w-6" />
-          </button>
-
-          <div className="ml-auto flex items-center gap-4">
-            <button className="relative p-2 rounded-full hover:bg-gray-100">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+        <header className="sticky top-0 z-40 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 shadow-sm">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-md hover:bg-gray-100 lg:hidden"
+            >
+              <Menu className="h-6 w-6" />
             </button>
-            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-              <span className="text-sm font-medium">A</span>
+            <div className="hidden lg:block">
+              <h2 className="text-lg font-semibold text-gray-800">Hi, Admin</h2>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Wallet Balance */}
+            <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+                <Wallet className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-gray-500">
+                  Wallet
+                </span>
+                <span className="text-sm font-bold text-gray-900">
+                  {walletVisible ? "₦1,250,000" : "••••••••"}
+                </span>
+              </div>
+              <button
+                onClick={() => setWalletVisible(!walletVisible)}
+                className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+                title={walletVisible ? "Hide balance" : "Show balance"}
+              >
+                {walletVisible ? (
+                  <EyeOff className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <Eye className="h-4 w-4 text-gray-500" />
+                )}
+              </button>
+            </div>
+
+            {/* Broadcast Button */}
+            <button className="p-2.5 rounded-full hover:bg-gray-100 transition-colors">
+              <Radio className="h-5 w-5 text-gray-700" />
+            </button>
+
+            {/* Notifications */}
+            <button className="relative p-2.5 rounded-full hover:bg-gray-100 transition-colors">
+              <Bell className="h-5 w-5 text-gray-700" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
+            </button>
+
+            {/* Profile */}
+            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm">
+              <span className="text-sm font-semibold text-white">A</span>
             </div>
           </div>
         </header>
@@ -193,5 +259,5 @@ export default function DashboardLayout({
         <main className="flex-1 p-4 lg:p-6 overflow-auto">{children}</main>
       </div>
     </div>
-  )
+  );
 }
