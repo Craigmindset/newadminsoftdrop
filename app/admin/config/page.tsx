@@ -1,5 +1,4 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { SupabaseConfigChecker } from "@/components/supabase-config-checker"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { InfoIcon } from "lucide-react"
 
@@ -16,8 +15,6 @@ export default function ConfigPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SupabaseConfigChecker />
-
           <Alert className="mt-6">
             <InfoIcon className="h-4 w-4" />
             <AlertDescription>
