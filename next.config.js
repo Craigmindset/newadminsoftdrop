@@ -6,9 +6,6 @@ const nextConfig = {
     // Enables the styled-components SWC transform
     styledComponents: false,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
