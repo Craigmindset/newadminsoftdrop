@@ -21,9 +21,7 @@ export default function Home() {
             Welcome to your admin dashboard.
           </p>
           <Link href="/admin" className="block w-full">
-            <Button className="w-full" size="lg">
-              Admin
-            </Button>
+            <Button className="w-full">Admin</Button>
           </Link>
         </CardContent>
       </Card>
