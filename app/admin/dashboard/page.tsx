@@ -1,13 +1,26 @@
-import { Suspense } from "react"
-import { CreditCard, DollarSign, ShieldAlert, TrendingUp, Truck, Users } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DisputeStatistics } from "@/components/admin/dispute-statistics"
-import { getAdminDashboardStats, getRecentActivity } from "@/lib/admin-data"
+import { Suspense } from "react";
+import {
+  CreditCard,
+  DollarSign,
+  ShieldAlert,
+  TrendingUp,
+  Truck,
+  Users,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DisputeStatistics } from "@/components/admin/dispute-statistics";
+import { getAdminDashboardStats, getRecentActivity } from "@/lib/admin-data";
 
 export default async function AdminDashboard() {
-  const stats = await getAdminDashboardStats()
-  const recentActivities = await getRecentActivity(5)
+  const stats = await getAdminDashboardStats();
+  const recentActivities = await getRecentActivity(5);
 
   return (
     <div className="space-y-6">
@@ -29,58 +42,83 @@ export default async function AdminDashboard() {
 
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-l-4 border-l-blue-500 bg-blue-50/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-gray-500" />
+            <CardTitle className="text-sm font-medium text-blue-900">
+              Total Users
+            </CardTitle>
+            <Users className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
-            <p className="text-xs text-gray-500">
-              {stats.activeCarriers.toLocaleString()} carriers, {stats.activeSenders.toLocaleString()} senders
+            <div className="text-2xl font-bold text-blue-900">
+              {stats.totalUsers.toLocaleString()}
+            </div>
+            <p className="text-xs text-blue-600">
+              {stats.activeCarriers.toLocaleString()} carriers,{" "}
+              {stats.activeSenders.toLocaleString()} senders
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-green-500 bg-green-50/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Carriers</CardTitle>
-            <Truck className="h-4 w-4 text-gray-500" />
+            <CardTitle className="text-sm font-medium text-green-900">
+              Active Carriers
+            </CardTitle>
+            <Truck className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeCarriers.toLocaleString()}</div>
-            <p className="text-xs text-gray-500">+{stats.weeklyGrowth}% from last week</p>
+            <div className="text-2xl font-bold text-green-900">
+              {stats.activeCarriers.toLocaleString()}
+            </div>
+            <p className="text-xs text-green-600">
+              +{stats.weeklyGrowth}% from last week
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+        <Card className="border-l-4 border-l-red-500 bg-red-50/50 cursor-pointer hover:bg-red-100/50 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Disputes</CardTitle>
-            <ShieldAlert className="h-4 w-4 text-gray-500" />
+            <CardTitle className="text-sm font-medium text-red-900">
+              Pending Disputes
+            </CardTitle>
+            <ShieldAlert className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.pendingDisputes}</div>
-            <p className="text-xs text-gray-500">Require attention</p>
+            <div className="text-2xl font-bold text-red-900">
+              {stats.pendingDisputes}
+            </div>
+            <p className="text-xs text-red-600">Require attention</p>
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+        <Card className="border-l-4 border-l-purple-500 bg-purple-50/50 cursor-pointer hover:bg-purple-100/50 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-gray-500" />
+            <CardTitle className="text-sm font-medium text-purple-900">
+              Revenue
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{stats.revenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-purple-900">
+              ₦{stats.revenue.toLocaleString()}
+            </div>
             <div className="flex items-center pt-1">
               <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-              <p className="text-xs text-green-500">+{stats.weeklyGrowth}% from last week</p>
+              <p className="text-xs text-green-500">
+                +{stats.weeklyGrowth}% from last week
+              </p>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Dispute Statistics */}
-      <Suspense fallback={<div className="h-[400px] w-full bg-gray-100 animate-pulse rounded-md"></div>}>
+      <Suspense
+        fallback={
+          <div className="h-[400px] w-full bg-gray-100 animate-pulse rounded-md"></div>
+        }
+      >
         <DisputeStatistics />
       </Suspense>
 
@@ -89,11 +127,15 @@ export default async function AdminDashboard() {
         <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Revenue Overview</CardTitle>
-            <CardDescription>Financial performance for the current period</CardDescription>
+            <CardDescription>
+              Financial performance for the current period
+            </CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <div className="h-[300px] flex items-center justify-center bg-gray-100 rounded-md">
-              <p className="text-gray-500">Revenue chart will be implemented soon</p>
+              <p className="text-gray-500">
+                Revenue chart will be implemented soon
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -108,11 +150,16 @@ export default async function AdminDashboard() {
               <div className="flex items-center">
                 <div className="w-full">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">Interstate Deliveries</span>
+                    <span className="text-sm font-medium">
+                      Interstate Deliveries
+                    </span>
                     <span className="text-sm text-gray-500">64%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-black h-2 rounded-full" style={{ width: "64%" }}></div>
+                    <div
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{ width: "64%" }}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -120,11 +167,16 @@ export default async function AdminDashboard() {
               <div className="flex items-center">
                 <div className="w-full">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">Local Deliveries</span>
+                    <span className="text-sm font-medium">
+                      Local Deliveries
+                    </span>
                     <span className="text-sm text-gray-500">28%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-black h-2 rounded-full" style={{ width: "28%" }}></div>
+                    <div
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{ width: "28%" }}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -132,11 +184,16 @@ export default async function AdminDashboard() {
               <div className="flex items-center">
                 <div className="w-full">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">Express Deliveries</span>
+                    <span className="text-sm font-medium">
+                      Express Deliveries
+                    </span>
                     <span className="text-sm text-gray-500">8%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-black h-2 rounded-full" style={{ width: "8%" }}></div>
+                    <div
+                      className="bg-orange-500 h-2 rounded-full"
+                      style={{ width: "8%" }}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -145,7 +202,9 @@ export default async function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">Total Transactions</p>
-                    <p className="text-2xl font-bold">{stats.totalTransactions.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">
+                      {stats.totalTransactions.toLocaleString()}
+                    </p>
                   </div>
                   <CreditCard className="h-8 w-8 text-gray-400" />
                 </div>
@@ -159,12 +218,16 @@ export default async function AdminDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Latest transactions and user activities</CardDescription>
+          <CardDescription>
+            Latest transactions and user activities
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {recentActivities.length === 0 ? (
-              <p className="text-center py-4 text-gray-500">No recent activity found</p>
+              <p className="text-center py-4 text-gray-500">
+                No recent activity found
+              </p>
             ) : (
               recentActivities.map((activity, i) => (
                 <div
@@ -176,8 +239,8 @@ export default async function AdminDashboard() {
                       activity.type === "user_registration"
                         ? "bg-green-100 text-green-600"
                         : activity.type === "transaction"
-                          ? "bg-blue-100 text-blue-600"
-                          : "bg-orange-100 text-orange-600"
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-orange-100 text-orange-600"
                     }`}
                   >
                     {activity.type === "user_registration" ? (
@@ -194,17 +257,29 @@ export default async function AdminDashboard() {
                         {activity.type === "user_registration"
                           ? `New ${activity.data.role} registered`
                           : activity.type === "transaction"
-                            ? `New ${activity.data.type || "standard"} transaction completed`
-                            : `Dispute ${activity.data.status === "resolved" ? "resolved" : "updated"}`}
+                          ? `New ${
+                              activity.data.type || "standard"
+                            } transaction completed`
+                          : `Dispute ${
+                              activity.data.status === "resolved"
+                                ? "resolved"
+                                : "updated"
+                            }`}
                       </p>
-                      <span className="text-xs text-gray-500">{new Date(activity.timestamp).toLocaleString()}</span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(activity.timestamp).toLocaleString()}
+                      </span>
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
                       {activity.type === "user_registration"
-                        ? `${activity.data.full_name || "A new user"} has completed registration`
+                        ? `${
+                            activity.data.full_name || "A new user"
+                          } has completed registration`
                         : activity.type === "transaction"
-                          ? `Transaction #${activity.id} for ₦${activity.data.amount?.toLocaleString() || "0"}`
-                          : `Dispute #${activity.id} ${activity.data.status}`}
+                        ? `Transaction #${activity.id} for ₦${
+                            activity.data.amount?.toLocaleString() || "0"
+                          }`
+                        : `Dispute #${activity.id} ${activity.data.status}`}
                     </p>
                   </div>
                 </div>
@@ -214,5 +289,5 @@ export default async function AdminDashboard() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
