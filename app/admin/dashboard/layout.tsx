@@ -12,6 +12,7 @@ import {
   CreditCard,
   Eye,
   EyeOff,
+  ChevronLeft,
   HelpCircle,
   Home,
   LogOut,
@@ -31,21 +32,24 @@ interface NavItemProps {
   icon: React.ReactNode;
   title: string;
   isActive: boolean;
+  collapsed?: boolean;
 }
 
-function NavItem({ href, icon, title, isActive }: NavItemProps) {
+function NavItem({ href, icon, title, isActive, collapsed }: NavItemProps) {
   return (
     <Link
       href={href}
+      title={collapsed ? title : undefined}
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 transition-all",
         isActive
           ? "bg-black text-white"
-          : "text-gray-500 hover:text-black hover:bg-gray-100"
+          : "text-gray-500 hover:text-black hover:bg-gray-100",
+        collapsed && "justify-center"
       )}
     >
       {icon}
-      <span>{title}</span>
+      {!collapsed && <span>{title}</span>}
     </Link>
   );
 }
@@ -56,6 +60,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [walletVisible, setWalletVisible] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
@@ -67,7 +72,157 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Mobile sidebar backdrop */}
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "hidden lg:flex flex-col h-screen bg-white border-r border-gray-200 transition-all duration-300 overflow-hidden",
+          sidebarCollapsed ? "w-20" : "w-64"
+        )}
+      >
+        <div className="flex items-center justify-between h-16 px-4 border-b">
+          {!sidebarCollapsed && (
+            <Link
+              href="/admin/dashboard"
+              className="flex items-center gap-2 font-bold text-xl"
+            >
+              <Image
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/softDrop-Logo2-jP4n5ZtyHNVWxET8XMOadJAtNMzpD0.png"
+                alt="SoftDrop Logo"
+                width={32}
+                height={32}
+                className="rounded-full"
+              />
+              <span>Super Admin</span>
+            </Link>
+          )}
+          {sidebarCollapsed && (
+            <Link href="/admin/dashboard">
+              <Image
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/softDrop-Logo2-jP4n5ZtyHNVWxET8XMOadJAtNMzpD0.png"
+                alt="SoftDrop Logo"
+                width={32}
+                height={32}
+                className="rounded-full"
+              />
+            </Link>
+          )}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+            title={sidebarCollapsed ? "Expand" : "Collapse"}
+          >
+            <ChevronLeft
+              className={cn(
+                "h-5 w-5 transition-transform",
+                sidebarCollapsed && "rotate-180"
+              )}
+            />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6 hide-scrollbar">
+          <nav className="space-y-1">
+            <NavItem
+              href="/admin/dashboard"
+              icon={<Home className="h-5 w-5" />}
+              title="Dashboard"
+              isActive={pathname === "/admin/dashboard"}
+              collapsed={sidebarCollapsed}
+            />
+            <NavItem
+              href="/admin/dashboard/senders"
+              icon={<Users className="h-5 w-5" />}
+              title="Senders"
+              isActive={
+                pathname === "/admin/dashboard/senders" ||
+                pathname.startsWith("/admin/dashboard/senders/")
+              }
+              collapsed={sidebarCollapsed}
+            />
+            <NavItem
+              href="/admin/dashboard/carriers"
+              icon={<Users className="h-5 w-5" />}
+              title="Carriers"
+              isActive={
+                pathname === "/admin/dashboard/carriers" ||
+                pathname.startsWith("/admin/dashboard/carriers/")
+              }
+              collapsed={sidebarCollapsed}
+            />
+            <NavItem
+              href="/admin/dashboard/transactions"
+              icon={<CreditCard className="h-5 w-5" />}
+              title="Transactions"
+              isActive={
+                pathname === "/admin/dashboard/transactions" ||
+                pathname.startsWith("/admin/dashboard/transactions/")
+              }
+              collapsed={sidebarCollapsed}
+            />
+            <NavItem
+              href="/admin/dashboard/disputes"
+              icon={<ShieldAlert className="h-5 w-5" />}
+              title="Dispute"
+              isActive={pathname === "/admin/dashboard/disputes"}
+              collapsed={sidebarCollapsed}
+            />
+            <NavItem
+              href="/admin/dashboard/notifications"
+              icon={<Bell className="h-5 w-5" />}
+              title="Notifications"
+              isActive={pathname === "/admin/dashboard/notifications"}
+              collapsed={sidebarCollapsed}
+            />
+            <NavItem
+              href="/admin/dashboard/analytics"
+              icon={<BarChart3 className="h-5 w-5" />}
+              title="Analytics"
+              isActive={pathname === "/admin/dashboard/analytics"}
+              collapsed={sidebarCollapsed}
+            />
+            <NavItem
+              href="/admin/dashboard/roles"
+              icon={<Users className="h-5 w-5" />}
+              title="Admin Roles"
+              isActive={pathname === "/admin/dashboard/roles"}
+              collapsed={sidebarCollapsed}
+            />
+            <NavItem
+              href="/admin/dashboard/support"
+              icon={<MessageSquare className="h-5 w-5" />}
+              title="Support"
+              isActive={pathname === "/admin/dashboard/support"}
+              collapsed={sidebarCollapsed}
+            />
+          </nav>
+
+          <div className="pt-4 mt-4 border-t border-gray-200">
+            <nav className="space-y-1">
+              <NavItem
+                href="/admin/dashboard/settings"
+                icon={<Settings className="h-5 w-5" />}
+                title="Settings"
+                isActive={pathname === "/admin/dashboard/settings"}
+                collapsed={sidebarCollapsed}
+              />
+
+              <button
+                onClick={handleLogout}
+                title={sidebarCollapsed ? "Logout" : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-gray-500 hover:text-black hover:bg-gray-100 w-full text-left transition-all",
+                  sidebarCollapsed && "justify-center"
+                )}
+              >
+                <LogOut className="h-5 w-5" />
+                {!sidebarCollapsed && <span>Logout</span>}
+              </button>
+            </nav>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile sidebar */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -75,10 +230,9 @@ export default function DashboardLayout({
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transition-transform overflow-y-auto lg:translate-x-0 lg:static lg:z-auto",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transition-transform overflow-y-auto lg:hidden hide-scrollbar",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

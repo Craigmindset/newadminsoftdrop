@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Search,
+  Stamp,
   MoreHorizontal,
   Eye,
   Edit,
@@ -83,12 +84,16 @@ const mockCarriers = Array.from({ length: 45 }, (_, i) => ({
   state: ["Lagos", "Abuja", "Kano", "Rivers", "Oyo"][
     Math.floor(Math.random() * 5)
   ],
+  carriageType: ["Walker", "Bicycle", "Motorcycle", "Car"][
+    Math.floor(Math.random() * 4)
+  ],
 }));
 
 export default function CarriersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [genderFilter, setGenderFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
+  const [carriageTypeFilter, setCarriageTypeFilter] = useState("all");
   const [transactionFilter, setTransactionFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -112,6 +117,9 @@ export default function CarriersPage() {
     const matchesGender =
       genderFilter === "all" || carrier.gender === genderFilter;
     const matchesState = stateFilter === "all" || carrier.state === stateFilter;
+    const matchesCarriageType =
+      carriageTypeFilter === "all" ||
+      carrier.carriageType === carriageTypeFilter;
     const matchesTransaction =
       transactionFilter === "all" ||
       (transactionFilter === "high" && carrier.transactions >= 50) ||
@@ -120,7 +128,13 @@ export default function CarriersPage() {
         carrier.transactions < 50) ||
       (transactionFilter === "low" && carrier.transactions < 20);
 
-    return matchesSearch && matchesGender && matchesState && matchesTransaction;
+    return (
+      matchesSearch &&
+      matchesGender &&
+      matchesState &&
+      matchesCarriageType &&
+      matchesTransaction
+    );
   });
 
   // Pagination
@@ -211,6 +225,21 @@ export default function CarriersPage() {
               </SelectContent>
             </Select>
             <Select
+              value={carriageTypeFilter}
+              onValueChange={setCarriageTypeFilter}
+            >
+              <SelectTrigger className="w-full md:w-[150px]">
+                <SelectValue placeholder="Carriage Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="Walker">Walker</SelectItem>
+                <SelectItem value="Bicycle">Bicycle</SelectItem>
+                <SelectItem value="Motorcycle">Motorcycle</SelectItem>
+                <SelectItem value="Car">Car</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
               value={transactionFilter}
               onValueChange={setTransactionFilter}
             >
@@ -236,6 +265,7 @@ export default function CarriersPage() {
                   <TableHead>Phone Number</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>State</TableHead>
+                  <TableHead>Carriage Type</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead>Also Sender</TableHead>
@@ -270,6 +300,9 @@ export default function CarriersPage() {
                       <TableCell>{carrier.phoneNumber}</TableCell>
                       <TableCell>{carrier.email}</TableCell>
                       <TableCell>{carrier.state}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{carrier.carriageType}</Badge>
+                      </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{carrier.role}</Badge>
                       </TableCell>
@@ -308,18 +341,17 @@ export default function CarriersPage() {
                                 View Details
                               </Link>
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-green-600 focus:text-green-600 focus:bg-green-50">
+                              <Stamp className="h-4 w-4 mr-2" />
+                              Approve
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleEdit(carrier)}
                             >
                               <Edit className="h-4 w-4 mr-2" />
                               Edit User
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(carrier)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

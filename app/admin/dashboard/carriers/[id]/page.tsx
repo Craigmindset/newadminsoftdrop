@@ -11,6 +11,7 @@ import {
   Package,
   User,
   CheckCircle2,
+  Download,
 } from "lucide-react";
 import {
   Card,
@@ -54,7 +55,7 @@ const getCarrierDetails = (id: string) => {
       Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
     ).toLocaleDateString(),
     verificationStatus: Math.random() > 0.3 ? "Verified" : "Pending",
-    vehicleType: ["Car", "Motorcycle", "Truck", "Van"][
+    carriageType: ["Walker", "Bicycle", "Motorcycle", "Car"][
       Math.floor(Math.random() * 4)
     ],
     licenseNumber: `LIC-${Math.floor(Math.random() * 1000000)}`,
@@ -147,8 +148,8 @@ export default function CarrierDetailsPage({
             </div>
             <Separator />
             <div>
-              <p className="text-sm font-medium text-gray-500">Username</p>
-              <p className="text-base">@{carrier.username}</p>
+              <p className="text-sm font-medium text-gray-500">Carrier ID</p>
+              <p className="text-base">@{carrier.id}</p>
             </div>
             <Separator />
             <div>
@@ -263,7 +264,7 @@ export default function CarrierDetailsPage({
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm font-medium text-gray-500">
-                Total Transactions
+                Total Delivery
               </p>
               <p className="text-2xl font-bold">{carrier.transactions}</p>
             </div>
@@ -285,8 +286,8 @@ export default function CarrierDetailsPage({
             </div>
             <Separator />
             <div>
-              <p className="text-sm font-medium text-gray-500">Vehicle Type</p>
-              <p className="text-base">{carrier.vehicleType}</p>
+              <p className="text-sm font-medium text-gray-500">Carriage Type</p>
+              <p className="text-base">{carrier.carriageType}</p>
             </div>
           </CardContent>
         </Card>
@@ -297,8 +298,8 @@ export default function CarrierDetailsPage({
         <CardHeader>
           <CardTitle>Verification Details</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
+        <CardContent>
+          <div className="flex flex-wrap gap-6 items-center">
             <div>
               <p className="text-sm font-medium text-gray-500">
                 License Number
@@ -306,9 +307,75 @@ export default function CarrierDetailsPage({
               <p className="text-base">{carrier.licenseNumber}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Vehicle Type</p>
-              <p className="text-base">{carrier.vehicleType}</p>
+              <p className="text-sm font-medium text-gray-500">Carriage Type</p>
+              <p className="text-base">{carrier.carriageType}</p>
             </div>
+
+            {/* Conditional fields for Car or Bike */}
+            {(carrier.carriageType === "Car" ||
+              carrier.carriageType === "Motorcycle") && (
+              <>
+                <button
+                  onClick={() => console.log("Download Carriage Document")}
+                  className="flex flex-row gap-3 items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+                  title="Download Carriage Document"
+                >
+                  <Download className="h-5 w-5 text-gray-500 group-hover:text-blue-600 mb-1" />
+                  <p className="text-xs font-medium text-gray-500 group-hover:text-blue-600">
+                    Carriage Document
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    DOC-{Math.floor(Math.random() * 1000000)}
+                  </p>
+                </button>
+                <button
+                  onClick={() => console.log("Download Driver License")}
+                  className="flex flex-row gap-3 items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+                  title="Download Driver License"
+                >
+                  <Download className="h-5 w-5 text-gray-500 group-hover:text-blue-600 mb-1" />
+                  <p className="text-xs font-medium text-gray-500 group-hover:text-blue-600">
+                    Driver License
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    DL-{Math.floor(Math.random() * 1000000)}
+                  </p>
+                </button>
+              </>
+            )}
+
+            {/* Conditional fields for Walker or Bicycle */}
+            {(carrier.carriageType === "Walker" ||
+              carrier.carriageType === "Bicycle") && (
+              <>
+                <button
+                  onClick={() => console.log("Download Utility")}
+                  className="flex flex-row gap-3 items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+                  title="Download Utility"
+                >
+                  <Download className="h-5 w-5 text-gray-500 group-hover:text-blue-600 mb-1" />
+                  <p className="text-xs font-medium text-gray-500 group-hover:text-blue-600">
+                    Utility
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    UTL-{Math.floor(Math.random() * 1000000)}
+                  </p>
+                </button>
+                <button
+                  onClick={() => console.log("Download Guarantor ID")}
+                  className="flex flex-row gap-3 items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+                  title="Download Guarantor ID"
+                >
+                  <Download className="h-5 w-5 text-gray-500 group-hover:text-blue-600 mb-1" />
+                  <p className="text-xs font-medium text-gray-500 group-hover:text-blue-600">
+                    Guarantor ID
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    GID-{Math.floor(Math.random() * 1000000)}
+                  </p>
+                </button>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -321,6 +388,9 @@ export default function CarrierDetailsPage({
           <Button variant="outline">Send Notification</Button>
           <Button variant="outline">
             {carrier.isVerified ? "Revoke Verification" : "Verify Carrier"}
+          </Button>
+          <Button className="bg-green-600 hover:bg-green-700">
+            Approve Carrier
           </Button>
           <Button variant="destructive">Suspend Account</Button>
         </CardContent>
