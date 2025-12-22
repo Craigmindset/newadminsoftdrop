@@ -18,8 +18,7 @@ export default function Home() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-center text-gray-600">
-            Welcome to your admin dashboard. Click the button below to access
-            the admin panel.
+            Welcome to your admin dashboard.
           </p>
           <Link href="/admin" className="block w-full">
             <Button className="w-full" size="lg">
