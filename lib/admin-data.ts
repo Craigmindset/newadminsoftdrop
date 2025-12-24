@@ -21,7 +21,7 @@ export type DisputeStats = {
 
 export type TimeframeOption = "daily" | "weekly" | "monthly";
 
-export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
+export function getAdminDashboardStats() {
   // Return mock data - replace with actual API calls
   return {
     totalUsers: 1250,
@@ -34,9 +34,9 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   };
 }
 
-export async function getDisputeStatistics(
+export function getDisputeStatistics(
   timeframe: TimeframeOption
-): Promise<DisputeStats> {
+) {
   // Return mock data - replace with actual API calls
   return {
     total: 48,

@@ -1,3 +1,5 @@
+"use client"
+
 import { Suspense } from "react";
 import {
   CreditCard,
@@ -17,10 +19,51 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DisputeStatistics } from "@/components/admin/dispute-statistics";
 import { getAdminDashboardStats, getRecentActivity } from "@/lib/admin-data";
+import { useAdminProvider } from "@/contexts/AdminContext";
 
-export default async function AdminDashboard() {
-  const stats = await getAdminDashboardStats();
-  const recentActivities = await getRecentActivity(5);
+export default function AdminDashboard() {
+  let adminProvider = useAdminProvider()
+  const stats = {
+    totalUsers: adminProvider?.dashboard?.totalUsers,
+    activeCarriers: 340,
+    activeSenders: 910,
+    pendingDisputes: 23,
+    totalTransactions: 5680,
+    revenue: adminProvider?.dashboard?.totalRevenue,
+    weeklyGrowth: 8.5,
+  };;
+  const recentActivities = [
+    {
+      type: "user_registration",
+      id: "1",
+      timestamp: new Date().toISOString(),
+      data: {
+        id: "1",
+        role: "carrier",
+        full_name: "John Doe",
+      },
+    },
+    {
+      type: "transaction",
+      id: "2",
+      timestamp: new Date().toISOString(),
+      data: {
+        id: "2",
+        amount: 50000,
+        type: "payment",
+      },
+    },
+    {
+      type: "dispute",
+      id: "3",
+      timestamp: new Date().toISOString(),
+      data: {
+        id: "3",
+        status: "pending",
+        resolution: null,
+      },
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -51,11 +94,11 @@ export default async function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-900">
-              {stats.totalUsers.toLocaleString()}
+              {stats?.totalUsers?.toLocaleString()}
             </div>
             <p className="text-xs text-blue-600">
-              {stats.activeCarriers.toLocaleString()} carriers,{" "}
-              {stats.activeSenders.toLocaleString()} senders
+              {stats?.activeCarriers?.toLocaleString()} carriers,{" "}
+              {stats?.activeSenders?.toLocaleString()} senders
             </p>
           </CardContent>
         </Card>
@@ -101,7 +144,7 @@ export default async function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-900">
-              ₦{stats.revenue.toLocaleString()}
+              ₦{stats.revenue?.toLocaleString()}
             </div>
             <div className="flex items-center pt-1">
               <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
@@ -267,7 +310,7 @@ export default async function AdminDashboard() {
                             }`}
                       </p>
                       <span className="text-xs text-gray-500">
-                        {new Date(activity.timestamp).toLocaleString()}
+                        {new Date(activity?.timestamp).toLocaleString()}
                       </span>
                     </div>
                     <p className="text-sm text-gray-500 mt-1">

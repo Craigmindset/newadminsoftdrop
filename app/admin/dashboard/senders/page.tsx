@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -63,29 +63,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAdminProvider } from "@/contexts/AdminContext";
+import Loading from "./loading";
 
 // Mock data - replace with actual data fetching
-const mockSenders = Array.from({ length: 45 }, (_, i) => ({
-  id: `sender-${i + 1}`,
-  profileImage: `https://api.dicebear.com/7.x/avatars/svg?seed=${i}`,
-  username: `sender${i + 1}`,
-  phoneNumber: `+234${Math.floor(Math.random() * 9000000000 + 1000000000)}`,
-  email: `sender${i + 1}@example.com`,
-  role: "Sender",
-  joined: new Date(
-    2023 + Math.floor(Math.random() * 2),
-    Math.floor(Math.random() * 12),
-    Math.floor(Math.random() * 28) + 1
-  ).toLocaleDateString(),
-  isCarrier: Math.random() > 0.5,
-  transactions: Math.floor(Math.random() * 100),
-  gender: Math.random() > 0.5 ? "Male" : "Female",
-  state: ["Lagos", "Abuja", "Kano", "Rivers", "Oyo"][
-    Math.floor(Math.random() * 5)
-  ],
-}));
 
 export default function SendersPage() {
+  const adminProvider = useAdminProvider()
   const [searchQuery, setSearchQuery] = useState("");
   const [genderFilter, setGenderFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
@@ -99,15 +83,41 @@ export default function SendersPage() {
     phoneNumber: "",
     email: "",
   });
+  
+  let [allSenders, setAllSenders] = useState<any>(adminProvider?.senders ? adminProvider.senders?.data : [])
+
+  useEffect(()=>{
+    setAllSenders(adminProvider?.senders?.data)
+  }, [adminProvider?.senders])
+  console.log("all senders", allSenders)
+  // Array.from({ length: 45 }, (_, i) => ({
+  //   id: `sender-${i + 1}`,
+  //   profileImage: `https://api.dicebear.com/7.x/avatars/svg?seed=${i}`,
+  //   username: `sender${i + 1}`,
+  //   phoneNumber: `+234${Math.floor(Math.random() * 9000000000 + 1000000000)}`,
+  //   email: `sender${i + 1}@example.com`,
+  //   role: "Sender",
+  //   joined: new Date(
+  //     2023 + Math.floor(Math.random() * 2),
+  //     Math.floor(Math.random() * 12),
+  //     Math.floor(Math.random() * 28) + 1
+  //   ).toLocaleDateString(),
+  //   isCarrier: Math.random() > 0.5,
+  //   transactions: Math.floor(Math.random() * 100),
+  //   gender: Math.random() > 0.5 ? "Male" : "Female",
+  //   state: ["Lagos", "Abuja", "Kano", "Rivers", "Oyo"][
+  //     Math.floor(Math.random() * 5)
+  //   ],
+  // }));
 
   const itemsPerPage = 20;
 
   // Filter senders
-  const filteredSenders = mockSenders.filter((sender) => {
+  const filteredSenders = allSenders?.filter((sender: any) => {
     const matchesSearch =
-      sender.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sender.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sender.phoneNumber.includes(searchQuery);
+      sender?.firstname.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      sender?.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      sender?.phone.includes(searchQuery);
 
     const matchesGender =
       genderFilter === "all" || sender.gender === genderFilter;
@@ -124,10 +134,10 @@ export default function SendersPage() {
   });
 
   // Pagination
-  const totalPages = Math.ceil(filteredSenders.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredSenders?.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentSenders = filteredSenders.slice(startIndex, endIndex);
+  const currentSenders = filteredSenders?.slice(startIndex, endIndex);
 
   const handleDelete = (sender: any) => {
     setSelectedSender(sender);
@@ -171,8 +181,8 @@ export default function SendersPage() {
         <CardHeader>
           <CardTitle>All Senders</CardTitle>
           <CardDescription>
-            Total: {filteredSenders.length} sender
-            {filteredSenders.length !== 1 ? "s" : ""}
+            Total: {filteredSenders?.length} sender
+            {filteredSenders?.length !== 1 ? "s" : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -244,7 +254,7 @@ export default function SendersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentSenders.length === 0 ? (
+                {currentSenders?.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={10}
@@ -254,7 +264,7 @@ export default function SendersPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  currentSenders.map((sender) => (
+                  currentSenders?.map((sender: any) => (
                     <TableRow key={sender.id}>
                       <TableCell>
                         <Avatar>
@@ -264,9 +274,9 @@ export default function SendersPage() {
                         </Avatar>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {sender.username}
+                        {`${sender.firstname} ${sender.lastname}`}
                       </TableCell>
-                      <TableCell>{sender.phoneNumber}</TableCell>
+                      <TableCell>{sender.phone}</TableCell>
                       <TableCell>{sender.email}</TableCell>
                       <TableCell>{sender.state}</TableCell>
                       <TableCell>
@@ -328,8 +338,8 @@ export default function SendersPage() {
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-gray-500">
                 Showing {startIndex + 1} to{" "}
-                {Math.min(endIndex, filteredSenders.length)} of{" "}
-                {filteredSenders.length} results
+                {Math.min(endIndex, filteredSenders?.length)} of{" "}
+                {filteredSenders?.length} results
               </p>
               <div className="flex gap-2">
                 <Button
