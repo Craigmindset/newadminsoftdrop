@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthProvider } from "@/contexts/AuthContext";
 
 interface NavItemProps {
   href: string;
@@ -59,6 +60,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const authProvider = useAuthProvider()
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [walletVisible, setWalletVisible] = useState(true);
@@ -66,9 +68,14 @@ export default function DashboardLayout({
   const router = useRouter();
 
   const handleLogout = () => {
-    // In a real app, you would handle logout logic here
-    router.push("/admin");
+    authProvider?.logout()
   };
+
+  useEffect(()=>{
+    if(authProvider?.isLoggedIn === false){
+      router.push("/admin")
+    }
+  }, [authProvider?.isLoggedIn])
 
   return (
     <div className="flex h-screen overflow-hidden">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -64,32 +64,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAdminProvider } from "@/contexts/AdminContext";
 
 // Mock data - replace with actual data fetching
-const mockCarriers = Array.from({ length: 45 }, (_, i) => ({
-  id: `carrier-${i + 1}`,
-  username: `carrier${i + 1}`,
-  phoneNumber: `+234${Math.floor(Math.random() * 9000000000 + 1000000000)}`,
-  email: `carrier${i + 1}@example.com`,
-  role: "Carrier",
-  joined: new Date(
-    2023 + Math.floor(Math.random() * 2),
-    Math.floor(Math.random() * 12),
-    Math.floor(Math.random() * 28) + 1
-  ).toLocaleDateString(),
-  isSender: Math.random() > 0.5,
-  isVerified: Math.random() > 0.3,
-  transactions: Math.floor(Math.random() * 100),
-  gender: Math.random() > 0.5 ? "Male" : "Female",
-  state: ["Lagos", "Abuja", "Kano", "Rivers", "Oyo"][
-    Math.floor(Math.random() * 5)
-  ],
-  carriageType: ["Walker", "Bicycle", "Motorcycle", "Car"][
-    Math.floor(Math.random() * 4)
-  ],
-}));
 
 export default function CarriersPage() {
+  let adminProvider = useAdminProvider()
   const [searchQuery, setSearchQuery] = useState("");
   const [genderFilter, setGenderFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
@@ -104,15 +84,42 @@ export default function CarriersPage() {
     phoneNumber: "",
     email: "",
   });
+  
+  const [allCarriers, setAllCarriers] = useState(adminProvider?.carriers ? adminProvider.carriers.data : []) 
 
+  useEffect(()=>{
+    setAllCarriers(adminProvider?.carriers.data)
+  }, [adminProvider?.carriers])
+  //   Array.from({ length: 45 }, (_, i) => ({
+  //   id: `carrier-${i + 1}`,
+  //   username: `carrier${i + 1}`,
+  //   phoneNumber: `+234${Math.floor(Math.random() * 9000000000 + 1000000000)}`,
+  //   email: `carrier${i + 1}@example.com`,
+  //   role: "Carrier",
+  //   joined: new Date(
+  //     2023 + Math.floor(Math.random() * 2),
+  //     Math.floor(Math.random() * 12),
+  //     Math.floor(Math.random() * 28) + 1
+  //   ).toLocaleDateString(),
+  //   isSender: Math.random() > 0.5,
+  //   isVerified: Math.random() > 0.3,
+  //   transactions: Math.floor(Math.random() * 100),
+  //   gender: Math.random() > 0.5 ? "Male" : "Female",
+  //   state: ["Lagos", "Abuja", "Kano", "Rivers", "Oyo"][
+  //     Math.floor(Math.random() * 5)
+  //   ],
+  //   carriageType: ["Walker", "Bicycle", "Motorcycle", "Car"][
+  //     Math.floor(Math.random() * 4)
+  //   ],
+  // }));
   const itemsPerPage = 20;
 
   // Filter carriers
-  const filteredCarriers = mockCarriers.filter((carrier) => {
+  const filteredCarriers = allCarriers.filter((carrier: any) => {
     const matchesSearch =
-      carrier.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      carrier.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      carrier.phoneNumber.includes(searchQuery);
+      carrier?.firstname.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      carrier?.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      carrier?.phoneNumber.includes(searchQuery);
 
     const matchesGender =
       genderFilter === "all" || carrier.gender === genderFilter;
@@ -285,7 +292,7 @@ export default function CarriersPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  currentCarriers.map((carrier) => (
+                  currentCarriers.map((carrier: any) => (
                     <TableRow key={carrier.id}>
                       <TableCell>
                         <Avatar>
@@ -295,9 +302,9 @@ export default function CarriersPage() {
                         </Avatar>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {carrier.username}
+                        {`${carrier.firstname} ${carrier.lastname}`}
                       </TableCell>
-                      <TableCell>{carrier.phoneNumber}</TableCell>
+                      <TableCell>{carrier.phone}</TableCell>
                       <TableCell>{carrier.email}</TableCell>
                       <TableCell>{carrier.state}</TableCell>
                       <TableCell>
@@ -321,7 +328,7 @@ export default function CarriersPage() {
                           {carrier.isVerified ? "Yes" : "No"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{carrier.transactions}</TableCell>
+                      <TableCell>{carrier._count.transactions}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

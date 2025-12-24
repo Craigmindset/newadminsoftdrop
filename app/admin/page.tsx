@@ -6,29 +6,31 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import Image from "next/image";
+import { useAuthProvider } from "@/contexts/AuthContext";
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState("");
+  const authProvider = useAuthProvider()
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate password length
-    if (password.length < 6 || password.length > 11) {
-      setError("Password must be between 6 and 11 characters.");
+    if (password.length < 6) {
+      setError("Password must be 6 characters.");
       return;
     }
 
-    // Check if email and password are valid (basic validation)
-    if (email && password === "823911") {
+    let body = {phone: `+234${phone.slice(1)}`, password}
+    console.log("body", body)
+    let res = await authProvider?.login(body, setError)
+    if(res?.success){
       router.push("/admin/dashboard");
-    } else {
-      setError("Invalid email or password. Please try again.");
-    }
+    } 
   };
 
   return (
@@ -48,7 +50,7 @@ export default function AdminLogin() {
             Admin Access
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Enter your email and password to continue
+            Enter your phone and password to continue
           </p>
         </div>
 
@@ -56,21 +58,21 @@ export default function AdminLogin() {
           <div className="rounded-md shadow-sm space-y-4">
             {/* Email Field */}
             <div className="relative">
-              <label htmlFor="email" className="sr-only">
+              <label htmlFor="phone" className="sr-only">
                 Email
               </label>
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Mail className="h-5 w-5 text-gray-400" />
               </div>
               <input
-                id="email"
-                name="email"
-                type="email"
+                id="phone"
+                name="phone"
+                type="phone"
                 required
                 className="appearance-none rounded-md relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
                 placeholder="Email Address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
               />
             </div>
 
