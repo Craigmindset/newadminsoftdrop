@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -24,9 +24,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAdminProvider } from "@/contexts/AdminContext";
 
 // Mock data - replace with actual data fetching
-const getCarrierDetails = (id: string) => {
+const getMockCarrierDetails = (id: string) => {
   const carrierNumber = parseInt(id.split("-")[1]) || 1;
   return {
     id,
@@ -69,7 +70,18 @@ export default function CarrierDetailsPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const carrier = getCarrierDetails(id);
+  const adminProvider = useAdminProvider()
+  let [carrier, setCarrier] = useState<any>(getMockCarrierDetails(id));
+
+  useEffect(()=>{
+    let res = adminProvider?.getSingleUser(id)
+    res?.then((value: any)=>{
+      console.log("value from fetching single user", value)
+      setCarrier(value.data)
+    }).catch((err)=>{
+      console.log("err", err)
+    })
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -97,13 +109,13 @@ export default function CarrierDetailsPage({
             </Avatar>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <CardTitle className="text-2xl">{carrier.fullName}</CardTitle>
+                <CardTitle className="text-2xl">{carrier.firstname} {carrier.lastname}</CardTitle>
                 <Badge
                   variant={
-                    carrier.accountStatus === "Active" ? "default" : "secondary"
+                    carrier.isActive ? "default" : "secondary"
                   }
                 >
-                  {carrier.accountStatus}
+                  {carrier.isActive ? "Active" : "Inactive"}
                 </Badge>
               </div>
               <CardDescription className="text-base">
@@ -116,12 +128,12 @@ export default function CarrierDetailsPage({
                 )}
                 <Badge
                   variant={
-                    carrier.verificationStatus === "Verified"
+                    carrier.verificationStatus === "VERIFIED"
                       ? "default"
                       : "outline"
                   }
                 >
-                  {carrier.isVerified ? (
+                  {carrier.verificationStatus === "VERIFIED" ? (
                     <CheckCircle2 className="h-3 w-3 mr-1" />
                   ) : null}
                   {carrier.verificationStatus}
@@ -144,7 +156,7 @@ export default function CarrierDetailsPage({
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm font-medium text-gray-500">Full Name</p>
-              <p className="text-base">{carrier.fullName}</p>
+              <p className="text-base">{carrier.firstname} {carrier.lastname}</p>
             </div>
             <Separator />
             <div>
@@ -189,7 +201,7 @@ export default function CarrierDetailsPage({
                 <p className="text-sm font-medium text-gray-500">
                   Phone Number
                 </p>
-                <p className="text-base">{carrier.phoneNumber}</p>
+                <p className="text-base">{carrier.phone}</p>
               </div>
             </div>
             <Separator />
@@ -215,7 +227,7 @@ export default function CarrierDetailsPage({
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm font-medium text-gray-500">Date Joined</p>
-              <p className="text-base">{carrier.joined}</p>
+              <p className="text-base">{carrier.createdAt}</p>
             </div>
             <Separator />
             <div>
@@ -229,10 +241,10 @@ export default function CarrierDetailsPage({
               </p>
               <Badge
                 variant={
-                  carrier.accountStatus === "Active" ? "default" : "secondary"
+                  carrier.isActive ? "default" : "secondary"
                 }
               >
-                {carrier.accountStatus}
+                {carrier.isActive ? "Active" : "Inactive"}
               </Badge>
             </div>
             <Separator />
@@ -242,7 +254,7 @@ export default function CarrierDetailsPage({
               </p>
               <Badge
                 variant={
-                  carrier.verificationStatus === "Verified"
+                  carrier.verificationStatus === "VERIFIED"
                     ? "default"
                     : "outline"
                 }
@@ -266,7 +278,7 @@ export default function CarrierDetailsPage({
               <p className="text-sm font-medium text-gray-500">
                 Total Delivery
               </p>
-              <p className="text-2xl font-bold">{carrier.transactions}</p>
+              <p className="text-2xl font-bold">{carrier?.courierProfile?.totalDeliveries}</p>
             </div>
             <Separator />
             <div>
@@ -287,7 +299,7 @@ export default function CarrierDetailsPage({
             <Separator />
             <div>
               <p className="text-sm font-medium text-gray-500">Carriage Type</p>
-              <p className="text-base">{carrier.carriageType}</p>
+              <p className="text-base">{carrier?.courierProfile?.vehicleType}</p>
             </div>
           </CardContent>
         </Card>
@@ -308,12 +320,12 @@ export default function CarrierDetailsPage({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Carriage Type</p>
-              <p className="text-base">{carrier.carriageType}</p>
+              <p className="text-base">{carrier?.courierProfile?.vehicleType}</p>
             </div>
 
             {/* Conditional fields for Car or Bike */}
-            {(carrier.carriageType === "Car" ||
-              carrier.carriageType === "Motorcycle") && (
+            {(carrier?.courierProfile?.vehicleType === "car" ||
+              carrier?.courierProfile?.vehicleType === "bike") && (
               <>
                 <button
                   onClick={() => console.log("Download Carriage Document")}
@@ -345,8 +357,8 @@ export default function CarrierDetailsPage({
             )}
 
             {/* Conditional fields for Walker or Bicycle */}
-            {(carrier.carriageType === "Walker" ||
-              carrier.carriageType === "Bicycle") && (
+            {(carrier?.courierProfile?.vehicleType === "walking" ||
+              carrier?.courierProfile?.vehicleType === "bicycle") && (
               <>
                 <button
                   onClick={() => console.log("Download Utility")}
@@ -389,7 +401,9 @@ export default function CarrierDetailsPage({
           <Button variant="outline">
             {carrier.isVerified ? "Revoke Verification" : "Verify Carrier"}
           </Button>
-          <Button className="bg-green-600 hover:bg-green-700">
+          <Button onClick={()=>{
+            adminProvider?.toggleGuarantorOrVehicleDetails(id, carrier?.courierProfile?.vehicleType)
+          }} className="bg-green-600 hover:bg-green-700">
             Approve Carrier
           </Button>
           <Button variant="destructive">Suspend Account</Button>
