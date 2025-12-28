@@ -88,7 +88,7 @@ export default function CarriersPage() {
   const [allCarriers, setAllCarriers] = useState(adminProvider?.carriers ? adminProvider.carriers.data : []) 
 
   useEffect(()=>{
-    setAllCarriers(adminProvider?.carriers.data)
+    setAllCarriers(adminProvider?.carriers?.data)
   }, [adminProvider?.carriers])
   //   Array.from({ length: 45 }, (_, i) => ({
   //   id: `carrier-${i + 1}`,
@@ -115,7 +115,7 @@ export default function CarriersPage() {
   const itemsPerPage = 20;
 
   // Filter carriers
-  const filteredCarriers = allCarriers.filter((carrier: any) => {
+  const filteredCarriers = allCarriers?.filter((carrier: any) => {
     const matchesSearch =
       carrier?.firstname.toLowerCase().includes(searchQuery.toLowerCase()) ||
       carrier?.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -145,10 +145,10 @@ export default function CarriersPage() {
   });
 
   // Pagination
-  const totalPages = Math.ceil(filteredCarriers.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredCarriers?.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentCarriers = filteredCarriers.slice(startIndex, endIndex);
+  const currentCarriers = filteredCarriers?.slice(startIndex, endIndex);
 
   const handleDelete = (carrier: any) => {
     setSelectedCarrier(carrier);
@@ -192,8 +192,8 @@ export default function CarriersPage() {
         <CardHeader>
           <CardTitle>All Carriers</CardTitle>
           <CardDescription>
-            Total: {filteredCarriers.length} carrier
-            {filteredCarriers.length !== 1 ? "s" : ""}
+            Total: {filteredCarriers?.length} carrier
+            {filteredCarriers?.length !== 1 ? "s" : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -282,7 +282,7 @@ export default function CarriersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentCarriers.length === 0 ? (
+                {currentCarriers?.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={11}
@@ -292,7 +292,7 @@ export default function CarriersPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  currentCarriers.map((carrier: any) => (
+                  currentCarriers?.map((carrier: any) => (
                     <TableRow key={carrier.id}>
                       <TableCell>
                         <Avatar>
@@ -349,7 +349,9 @@ export default function CarriersPage() {
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-green-600 focus:text-green-600 focus:bg-green-50">
+                            <DropdownMenuItem onClick={()=>{
+                              adminProvider?.toggleGuarantorOrVehicleDetails(carrier.id, carrier.vehicleType)
+                            }} className="text-green-600 focus:text-green-600 focus:bg-green-50">
                               <Stamp className="h-4 w-4 mr-2" />
                               Approve
                             </DropdownMenuItem>
@@ -375,8 +377,8 @@ export default function CarriersPage() {
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-gray-500">
                 Showing {startIndex + 1} to{" "}
-                {Math.min(endIndex, filteredCarriers.length)} of{" "}
-                {filteredCarriers.length} results
+                {Math.min(endIndex, filteredCarriers?.length)} of{" "}
+                {filteredCarriers?.length} results
               </p>
               <div className="flex gap-2">
                 <Button

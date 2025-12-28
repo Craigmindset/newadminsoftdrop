@@ -11,9 +11,11 @@ interface AdminContext {
     transactions: any;
     error: string;
     adminLoading: boolean;
+    getSingleUser: (userId: string) => Promise<{success: true, data: any} | any>
     getSenders: (page: number, limit: number) => void;
     getCarriers: (page: number, limit: number) => void;
     getTransactions: (page: number, limit: number) => void;
+    toggleGuarantorOrVehicleDetails: (id: string, vehicleType: string) => void;
 }
 
 const AdminContext = createContext<AdminContext | null>(null)
