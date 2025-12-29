@@ -73,13 +73,13 @@ export default function useAdmin(authToken: string, refreshAuth: (token: string)
         setTransactions(res.data?.data)
     }
 
-    async function toggleGuarantorOrVehicleDetails(id: string, vehicleType: string){
-        console.log("toggle clicked")
+    async function toggleGuarantorOrVehicleDetails(id: string, vehicleType: string, body: any){
+        console.log("toggle clicked.. id:", id, body)
         setAdminLoading(true)
         let res
         if(vehicleType === "walking" || vehicleType === "bicycle"){
-            res = await patchData(`/admin/carrier/${id}/guarantor-details`, refreshAuth, {}, authToken)
-            console.log("response from guarantor toggle", res.error || res.data?.data)
+            res = await patchData(`/admin/carrier/${id}/guarantor-details`, refreshAuth, body, authToken)
+            console.log("response from guarantor toggle", res.error || res.data)
             if(res.err){
                 handleErrorCase(res, setAdminLoading, logout, setError)
                 return
@@ -87,8 +87,8 @@ export default function useAdmin(authToken: string, refreshAuth: (token: string)
         }
 
         if(vehicleType === "bike" || vehicleType === "car"){
-            res = await patchData(`/admin/carrier/${id}/vehicle-details`, refreshAuth, {}, authToken)
-            console.log("response from vehicle toggle", res.error || res.data?.data)
+            res = await patchData(`/admin/carrier/${id}/vehicle-details`, refreshAuth, body, authToken)
+            console.log("response from vehicle toggle", res.error || res.data)
             if(res.err){
                 handleErrorCase(res, setAdminLoading, logout, setError)
                 return
@@ -100,13 +100,11 @@ export default function useAdmin(authToken: string, refreshAuth: (token: string)
     }
 
     useEffect(()=>{
-        if(!adminLoading){
             authToken && !dashboard && getDashboardData()
             authToken && !senders && getSenders(1, 20)
             authToken && !carriers && getCarriers(1, 20)
             //authToken && !transactions && getTransactions(1, 20)
-        }
-    }, [dashboard, authToken, senders, adminLoading, carriers])
+    }, [dashboard, authToken, senders, carriers])
 
     return{
         dashboard,

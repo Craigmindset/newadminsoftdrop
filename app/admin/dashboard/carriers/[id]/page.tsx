@@ -402,7 +402,7 @@ export default function CarrierDetailsPage({
             {carrier.isVerified ? "Revoke Verification" : "Verify Carrier"}
           </Button>
           <Button onClick={()=>{
-            adminProvider?.toggleGuarantorOrVehicleDetails(id, carrier?.courierProfile?.vehicleType)
+            adminProvider?.toggleGuarantorOrVehicleDetails(id, carrier?.courierProfile?.vehicleType, {isVerified: true})
           }} className="bg-green-600 hover:bg-green-700">
             Approve Carrier
           </Button>

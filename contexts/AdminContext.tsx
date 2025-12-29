@@ -15,7 +15,7 @@ interface AdminContext {
     getSenders: (page: number, limit: number) => void;
     getCarriers: (page: number, limit: number) => void;
     getTransactions: (page: number, limit: number) => void;
-    toggleGuarantorOrVehicleDetails: (id: string, vehicleType: string) => void;
+    toggleGuarantorOrVehicleDetails: (id: string, vehicleType: string, body: any) => void;
 }
 
 const AdminContext = createContext<AdminContext | null>(null)
