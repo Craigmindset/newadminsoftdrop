@@ -349,11 +349,13 @@ export default function CarriersPage() {
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={()=>{
-                              adminProvider?.toggleGuarantorOrVehicleDetails(carrier.id, carrier.vehicleType)
-                            }} className="text-green-600 focus:text-green-600 focus:bg-green-50">
-                              <Stamp className="h-4 w-4 mr-2" />
-                              Approve
+                            <DropdownMenuItem  className="text-green-600 focus:text-green-600 focus:bg-green-50">
+                              <Link
+                                href={`/admin/dashboard/carriers/${carrier.id}`}
+                              >
+                                <Stamp className="h-4 w-4 mr-2" />
+                                Approve
+                              </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
