@@ -11,7 +11,6 @@ export const metadata = {
   title: "Softdropweb",
   description: "Fast and reliable logistics solutions for your delivery needs",
   manifest: "/site.webmanifest",
-  generator: "v0.dev",
 };
 
 export default function RootLayout({
