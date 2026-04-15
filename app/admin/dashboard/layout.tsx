@@ -2,10 +2,10 @@
 
 import type React from "react";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Bell,
@@ -15,7 +15,6 @@ import {
   ChevronLeft,
   HelpCircle,
   Home,
-  LogOut,
   Menu,
   MessageSquare,
   Radio,
@@ -26,7 +25,6 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuthProvider } from "@/contexts/AuthContext";
 
 interface NavItemProps {
   href: string;
@@ -35,6 +33,22 @@ interface NavItemProps {
   isActive: boolean;
   collapsed?: boolean;
 }
+
+type SidebarItem = {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  permission:
+    | "dashboard:view"
+    | "senders:view"
+    | "carriers:view"
+    | "transactions:view"
+    | "disputes:view"
+    | "notifications:view"
+    | "analytics:view"
+    | "roles:view"
+    | "settings:view";
+};
 
 function NavItem({ href, icon, title, isActive, collapsed }: NavItemProps) {
   return (
@@ -46,7 +60,7 @@ function NavItem({ href, icon, title, isActive, collapsed }: NavItemProps) {
         isActive
           ? "bg-black text-white"
           : "text-gray-500 hover:text-black hover:bg-gray-100",
-        collapsed && "justify-center"
+        collapsed && "justify-center",
       )}
     >
       {icon}
@@ -60,22 +74,71 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const authProvider = useAuthProvider()
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [walletVisible, setWalletVisible] = useState(true);
   const pathname = usePathname();
-  const router = useRouter();
 
-  const handleLogout = () => {
-    authProvider?.logout()
+  const mainNavItems: SidebarItem[] = [
+    {
+      href: "/admin/dashboard",
+      icon: <Home className="h-5 w-5" />,
+      title: "Dashboard",
+      permission: "dashboard:view",
+    },
+    {
+      href: "/admin/dashboard/senders",
+      icon: <Users className="h-5 w-5" />,
+      title: "Senders",
+      permission: "senders:view",
+    },
+    {
+      href: "/admin/dashboard/carriers",
+      icon: <Users className="h-5 w-5" />,
+      title: "Carriers",
+      permission: "carriers:view",
+    },
+    {
+      href: "/admin/dashboard/transactions",
+      icon: <CreditCard className="h-5 w-5" />,
+      title: "Transactions",
+      permission: "transactions:view",
+    },
+    {
+      href: "/admin/dashboard/disputes",
+      icon: <ShieldAlert className="h-5 w-5" />,
+      title: "Dispute",
+      permission: "disputes:view",
+    },
+    {
+      href: "/admin/dashboard/notifications",
+      icon: <Bell className="h-5 w-5" />,
+      title: "Notifications",
+      permission: "notifications:view",
+    },
+    {
+      href: "/admin/dashboard/analytics",
+      icon: <BarChart3 className="h-5 w-5" />,
+      title: "Analytics",
+      permission: "analytics:view",
+    },
+    {
+      href: "/admin/dashboard/roles",
+      icon: <Users className="h-5 w-5" />,
+      title: "Admin Roles",
+      permission: "roles:view",
+    },
+  ];
+
+  const settingsNavItem: SidebarItem = {
+    href: "/admin/dashboard/settings",
+    icon: <Settings className="h-5 w-5" />,
+    title: "Settings",
+    permission: "settings:view",
   };
 
-  useEffect(()=>{
-    if(authProvider?.isLoggedIn === false){
-      router.push("/admin")
-    }
-  }, [authProvider?.isLoggedIn])
+  const visibleMainNavItems = mainNavItems;
+  const canSeeSettings = true;
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -83,7 +146,7 @@ export default function DashboardLayout({
       <aside
         className={cn(
           "hidden lg:flex flex-col h-screen bg-white border-r border-gray-200 transition-all duration-300 overflow-hidden",
-          sidebarCollapsed ? "w-20" : "w-64"
+          sidebarCollapsed ? "w-20" : "w-64",
         )}
       >
         <div className="flex items-center justify-between h-16 px-4 border-b">
@@ -121,7 +184,7 @@ export default function DashboardLayout({
             <ChevronLeft
               className={cn(
                 "h-5 w-5 transition-transform",
-                sidebarCollapsed && "rotate-180"
+                sidebarCollapsed && "rotate-180",
               )}
             />
           </button>
@@ -129,101 +192,31 @@ export default function DashboardLayout({
 
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6 hide-scrollbar">
           <nav className="space-y-1">
-            <NavItem
-              href="/admin/dashboard"
-              icon={<Home className="h-5 w-5" />}
-              title="Dashboard"
-              isActive={pathname === "/admin/dashboard"}
-              collapsed={sidebarCollapsed}
-            />
-            <NavItem
-              href="/admin/dashboard/senders"
-              icon={<Users className="h-5 w-5" />}
-              title="Senders"
-              isActive={
-                pathname === "/admin/dashboard/senders" ||
-                pathname.startsWith("/admin/dashboard/senders/")
-              }
-              collapsed={sidebarCollapsed}
-            />
-            <NavItem
-              href="/admin/dashboard/carriers"
-              icon={<Users className="h-5 w-5" />}
-              title="Carriers"
-              isActive={
-                pathname === "/admin/dashboard/carriers" ||
-                pathname.startsWith("/admin/dashboard/carriers/")
-              }
-              collapsed={sidebarCollapsed}
-            />
-            <NavItem
-              href="/admin/dashboard/transactions"
-              icon={<CreditCard className="h-5 w-5" />}
-              title="Transactions"
-              isActive={
-                pathname === "/admin/dashboard/transactions" ||
-                pathname.startsWith("/admin/dashboard/transactions/")
-              }
-              collapsed={sidebarCollapsed}
-            />
-            <NavItem
-              href="/admin/dashboard/disputes"
-              icon={<ShieldAlert className="h-5 w-5" />}
-              title="Dispute"
-              isActive={pathname === "/admin/dashboard/disputes"}
-              collapsed={sidebarCollapsed}
-            />
-            <NavItem
-              href="/admin/dashboard/notifications"
-              icon={<Bell className="h-5 w-5" />}
-              title="Notifications"
-              isActive={pathname === "/admin/dashboard/notifications"}
-              collapsed={sidebarCollapsed}
-            />
-            <NavItem
-              href="/admin/dashboard/analytics"
-              icon={<BarChart3 className="h-5 w-5" />}
-              title="Analytics"
-              isActive={pathname === "/admin/dashboard/analytics"}
-              collapsed={sidebarCollapsed}
-            />
-            <NavItem
-              href="/admin/dashboard/roles"
-              icon={<Users className="h-5 w-5" />}
-              title="Admin Roles"
-              isActive={pathname === "/admin/dashboard/roles"}
-              collapsed={sidebarCollapsed}
-            />
-            <NavItem
-              href="/admin/dashboard/support"
-              icon={<MessageSquare className="h-5 w-5" />}
-              title="Support"
-              isActive={pathname === "/admin/dashboard/support"}
-              collapsed={sidebarCollapsed}
-            />
+            {visibleMainNavItems.map((item) => (
+              <NavItem
+                key={item.href}
+                href={item.href}
+                icon={item.icon}
+                title={item.title}
+                isActive={
+                  pathname === item.href || pathname.startsWith(`${item.href}/`)
+                }
+                collapsed={sidebarCollapsed}
+              />
+            ))}
           </nav>
 
           <div className="pt-4 mt-4 border-t border-gray-200">
             <nav className="space-y-1">
-              <NavItem
-                href="/admin/dashboard/settings"
-                icon={<Settings className="h-5 w-5" />}
-                title="Settings"
-                isActive={pathname === "/admin/dashboard/settings"}
-                collapsed={sidebarCollapsed}
-              />
-
-              <button
-                onClick={handleLogout}
-                title={sidebarCollapsed ? "Logout" : undefined}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-gray-500 hover:text-black hover:bg-gray-100 w-full text-left transition-all",
-                  sidebarCollapsed && "justify-center"
-                )}
-              >
-                <LogOut className="h-5 w-5" />
-                {!sidebarCollapsed && <span>Logout</span>}
-              </button>
+              {canSeeSettings && (
+                <NavItem
+                  href={settingsNavItem.href}
+                  icon={settingsNavItem.icon}
+                  title={settingsNavItem.title}
+                  isActive={pathname === settingsNavItem.href}
+                  collapsed={sidebarCollapsed}
+                />
+              )}
             </nav>
           </div>
         </div>
@@ -240,7 +233,7 @@ export default function DashboardLayout({
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transition-transform overflow-y-auto lg:hidden hide-scrollbar",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex flex-col h-full">
@@ -268,87 +261,30 @@ export default function DashboardLayout({
 
           <div className="flex-1 overflow-auto py-4 px-3 space-y-6">
             <nav className="space-y-1">
-              <NavItem
-                href="/admin/dashboard"
-                icon={<Home className="h-5 w-5" />}
-                title="Dashboard"
-                isActive={pathname === "/admin/dashboard"}
-              />
-              <NavItem
-                href="/admin/dashboard/senders"
-                icon={<Users className="h-5 w-5" />}
-                title="Senders"
-                isActive={
-                  pathname === "/admin/dashboard/senders" ||
-                  pathname.startsWith("/admin/dashboard/senders/")
-                }
-              />
-              <NavItem
-                href="/admin/dashboard/carriers"
-                icon={<Users className="h-5 w-5" />}
-                title="Carriers"
-                isActive={
-                  pathname === "/admin/dashboard/carriers" ||
-                  pathname.startsWith("/admin/dashboard/carriers/")
-                }
-              />
-              <NavItem
-                href="/admin/dashboard/transactions"
-                icon={<CreditCard className="h-5 w-5" />}
-                title="Transactions"
-                isActive={
-                  pathname === "/admin/dashboard/transactions" ||
-                  pathname.startsWith("/admin/dashboard/transactions/")
-                }
-              />
-              <NavItem
-                href="/admin/dashboard/disputes"
-                icon={<ShieldAlert className="h-5 w-5" />}
-                title="Dispute"
-                isActive={pathname === "/admin/dashboard/disputes"}
-              />
-              <NavItem
-                href="/admin/dashboard/notifications"
-                icon={<Bell className="h-5 w-5" />}
-                title="Notifications"
-                isActive={pathname === "/admin/dashboard/notifications"}
-              />
-              <NavItem
-                href="/admin/dashboard/analytics"
-                icon={<BarChart3 className="h-5 w-5" />}
-                title="Analytics"
-                isActive={pathname === "/admin/dashboard/analytics"}
-              />
-              <NavItem
-                href="/admin/dashboard/roles"
-                icon={<Users className="h-5 w-5" />}
-                title="Admin Roles"
-                isActive={pathname === "/admin/dashboard/roles"}
-              />
-              <NavItem
-                href="/admin/dashboard/support"
-                icon={<MessageSquare className="h-5 w-5" />}
-                title="Support"
-                isActive={pathname === "/admin/dashboard/support"}
-              />
+              {visibleMainNavItems.map((item) => (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  title={item.title}
+                  isActive={
+                    pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`)
+                  }
+                />
+              ))}
             </nav>
 
             <div className="pt-4 mt-4 border-t border-gray-200">
               <nav className="space-y-1">
-                <NavItem
-                  href="/admin/dashboard/settings"
-                  icon={<Settings className="h-5 w-5" />}
-                  title="Settings"
-                  isActive={pathname === "/admin/dashboard/settings"}
-                />
-
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-500 hover:text-black hover:bg-gray-100 w-full text-left"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span>Logout</span>
-                </button>
+                {canSeeSettings && (
+                  <NavItem
+                    href={settingsNavItem.href}
+                    icon={settingsNavItem.icon}
+                    title={settingsNavItem.title}
+                    isActive={pathname === settingsNavItem.href}
+                  />
+                )}
               </nav>
             </div>
           </div>

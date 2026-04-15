@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   CreditCard,
   DollarSign,
@@ -18,20 +18,73 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DisputeStatistics } from "@/components/admin/dispute-statistics";
-import { getAdminDashboardStats, getRecentActivity } from "@/lib/admin-data";
-import { useAdminProvider } from "@/contexts/AdminContext";
 
 export default function AdminDashboard() {
-  let adminProvider = useAdminProvider()
-  const stats = {
-    totalUsers: adminProvider?.dashboard?.totalUsers,
-    activeCarriers: 340,
-    activeSenders: 910,
-    pendingDisputes: 23,
-    totalTransactions: 5680,
-    revenue: adminProvider?.dashboard?.totalRevenue,
-    weeklyGrowth: 8.5,
-  };;
+  const [totalSenders, setTotalSenders] = useState<number>(0);
+  const [totalCarriers, setTotalCarriers] = useState<number>(0);
+  const [totalDeliveries, setTotalDeliveries] = useState<number>(0);
+  const [completedRevenue, setCompletedRevenue] = useState<number>(0);
+
+  const stats = useMemo(
+    () => ({
+      totalSenders,
+      totalCarriers,
+      totalDeliveries,
+      revenue: completedRevenue,
+      weeklyGrowth: 8.5,
+    }),
+    [totalSenders, totalCarriers, totalDeliveries, completedRevenue],
+  );
+
+  useEffect(() => {
+    let active = true;
+    const cacheKey = "admin:dashboard-metrics:v1";
+
+    async function loadCounts() {
+      try {
+        const cachedRaw = sessionStorage.getItem(cacheKey);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (active && cached) {
+            setTotalSenders(Number(cached.totalSenders || 0));
+            setTotalCarriers(Number(cached.totalCarriers || 0));
+            setTotalDeliveries(Number(cached.totalDeliveries || 0));
+            setCompletedRevenue(Number(cached.revenue || 0));
+          }
+        }
+      } catch (error) {
+        console.error("Failed to read dashboard metrics cache", error);
+      }
+
+      const response = await fetch("/api/admin/dashboard-metrics");
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      if (!active) {
+        return;
+      }
+
+      setTotalSenders(Number(data.totalSenders || 0));
+      setTotalCarriers(Number(data.totalCarriers || 0));
+      setTotalDeliveries(Number(data.totalDeliveries || 0));
+      setCompletedRevenue(Number(data.revenue || 0));
+
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(data));
+      } catch (error) {
+        console.error("Failed to write dashboard metrics cache", error);
+      }
+    }
+
+    loadCounts();
+
+    return () => {
+      active = false;
+    };
+  }, []);
   const recentActivities = [
     {
       type: "user_registration",
@@ -88,31 +141,28 @@ export default function AdminDashboard() {
         <Card className="border-l-4 border-l-blue-500 bg-blue-50/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">
-              Total Users
+              Total Sender
             </CardTitle>
             <Users className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-900">
-              {stats?.totalUsers?.toLocaleString()}
+              {stats.totalSenders.toLocaleString()}
             </div>
-            <p className="text-xs text-blue-600">
-              {stats?.activeCarriers?.toLocaleString()} carriers,{" "}
-              {stats?.activeSenders?.toLocaleString()} senders
-            </p>
+            <p className="text-xs text-blue-600">Active senders in Supabase</p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-green-500 bg-green-50/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">
-              Active Carriers
+              Total Carrier
             </CardTitle>
             <Truck className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900">
-              {stats.activeCarriers.toLocaleString()}
+              {stats.totalCarriers.toLocaleString()}
             </div>
             <p className="text-xs text-green-600">
               +{stats.weeklyGrowth}% from last week
@@ -123,15 +173,15 @@ export default function AdminDashboard() {
         <Card className="border-l-4 border-l-red-500 bg-red-50/50 cursor-pointer hover:bg-red-100/50 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-red-900">
-              Pending Disputes
+              Total Delivery
             </CardTitle>
             <ShieldAlert className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-900">
-              {stats.pendingDisputes}
+              {stats.totalDeliveries.toLocaleString()}
             </div>
-            <p className="text-xs text-red-600">Require attention</p>
+            <p className="text-xs text-red-600">All recorded transactions</p>
           </CardContent>
         </Card>
 
@@ -144,7 +194,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-900">
-              ₦{stats.revenue?.toLocaleString()}
+              ₦{stats.revenue.toLocaleString()}
             </div>
             <div className="flex items-center pt-1">
               <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
@@ -244,9 +294,9 @@ export default function AdminDashboard() {
               <div className="pt-4 mt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">Total Transactions</p>
+                    <p className="text-sm font-medium">Total Delivery</p>
                     <p className="text-2xl font-bold">
-                      {stats.totalTransactions.toLocaleString()}
+                      {stats.totalDeliveries.toLocaleString()}
                     </p>
                   </div>
                   <CreditCard className="h-8 w-8 text-gray-400" />
@@ -282,8 +332,8 @@ export default function AdminDashboard() {
                       activity.type === "user_registration"
                         ? "bg-green-100 text-green-600"
                         : activity.type === "transaction"
-                        ? "bg-blue-100 text-blue-600"
-                        : "bg-orange-100 text-orange-600"
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-orange-100 text-orange-600"
                     }`}
                   >
                     {activity.type === "user_registration" ? (
@@ -300,14 +350,14 @@ export default function AdminDashboard() {
                         {activity.type === "user_registration"
                           ? `New ${activity.data.role} registered`
                           : activity.type === "transaction"
-                          ? `New ${
-                              activity.data.type || "standard"
-                            } transaction completed`
-                          : `Dispute ${
-                              activity.data.status === "resolved"
-                                ? "resolved"
-                                : "updated"
-                            }`}
+                            ? `New ${
+                                activity.data.type || "standard"
+                              } transaction completed`
+                            : `Dispute ${
+                                activity.data.status === "resolved"
+                                  ? "resolved"
+                                  : "updated"
+                              }`}
                       </p>
                       <span className="text-xs text-gray-500">
                         {new Date(activity?.timestamp).toLocaleString()}
@@ -319,10 +369,10 @@ export default function AdminDashboard() {
                             activity.data.full_name || "A new user"
                           } has completed registration`
                         : activity.type === "transaction"
-                        ? `Transaction #${activity.id} for ₦${
-                            activity.data.amount?.toLocaleString() || "0"
-                          }`
-                        : `Dispute #${activity.id} ${activity.data.status}`}
+                          ? `Transaction #${activity.id} for ₦${
+                              activity.data.amount?.toLocaleString() || "0"
+                            }`
+                          : `Dispute #${activity.id} ${activity.data.status}`}
                     </p>
                   </div>
                 </div>

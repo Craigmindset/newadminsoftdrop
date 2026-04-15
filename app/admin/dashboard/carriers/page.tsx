@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -8,7 +8,6 @@ import {
   MoreHorizontal,
   Eye,
   Edit,
-  Trash2,
   User as UserIcon,
 } from "lucide-react";
 import {
@@ -63,18 +62,15 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useAdminProvider } from "@/contexts/AdminContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Mock data - replace with actual data fetching
 
 export default function CarriersPage() {
-  let adminProvider = useAdminProvider()
   const [searchQuery, setSearchQuery] = useState("");
-  const [genderFilter, setGenderFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
   const [carriageTypeFilter, setCarriageTypeFilter] = useState("all");
-  const [transactionFilter, setTransactionFilter] = useState("all");
+  const [badgeFilter, setBadgeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -84,12 +80,56 @@ export default function CarriersPage() {
     phoneNumber: "",
     email: "",
   });
-  
-  const [allCarriers, setAllCarriers] = useState(adminProvider?.carriers ? adminProvider.carriers.data : []) 
 
-  useEffect(()=>{
-    setAllCarriers(adminProvider?.carriers?.data)
-  }, [adminProvider?.carriers])
+  const [allCarriers, setAllCarriers] = useState<any[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    const cacheKey = "admin:carriers:v1";
+
+    async function loadCarriers() {
+      try {
+        const cachedRaw = sessionStorage.getItem(cacheKey);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (active && Array.isArray(cached?.data)) {
+            setAllCarriers(cached.data);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to read cached carriers", error);
+      }
+
+      const response = await fetch("/api/admin/carriers", {});
+
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = await response.json();
+      if (!active) {
+        return;
+      }
+
+      const nextData = payload.data || [];
+      setAllCarriers(nextData);
+
+      try {
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({ data: nextData, fetchedAt: Date.now() }),
+        );
+      } catch (error) {
+        console.error("Failed to cache carriers", error);
+      }
+    }
+
+    loadCarriers();
+
+    return () => {
+      active = false;
+    };
+  }, []);
   //   Array.from({ length: 45 }, (_, i) => ({
   //   id: `carrier-${i + 1}`,
   //   username: `carrier${i + 1}`,
@@ -115,34 +155,37 @@ export default function CarriersPage() {
   const itemsPerPage = 20;
 
   // Filter carriers
-  const filteredCarriers = allCarriers?.filter((carrier: any) => {
-    const matchesSearch =
-      carrier?.firstname.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      carrier?.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      carrier?.phoneNumber.includes(searchQuery);
+  const filteredCarriers = useMemo(
+    () =>
+      allCarriers?.filter((carrier: any) => {
+        const matchesSearch =
+          carrier?.first_name
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          carrier?.last_name
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          carrier?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          carrier?.phone_number?.includes(searchQuery);
 
-    const matchesGender =
-      genderFilter === "all" || carrier.gender === genderFilter;
-    const matchesState = stateFilter === "all" || carrier.state === stateFilter;
-    const matchesCarriageType =
-      carriageTypeFilter === "all" ||
-      carrier.carriageType === carriageTypeFilter;
-    const matchesTransaction =
-      transactionFilter === "all" ||
-      (transactionFilter === "high" && carrier.transactions >= 50) ||
-      (transactionFilter === "medium" &&
-        carrier.transactions >= 20 &&
-        carrier.transactions < 50) ||
-      (transactionFilter === "low" && carrier.transactions < 20);
+        const matchesState =
+          stateFilter === "all" || carrier.state === stateFilter;
+        const normalizedCarriage = String(
+          carrier?.carriage_type || "",
+        ).toLowerCase();
+        const normalizedFilter = carriageTypeFilter.toLowerCase();
+        const matchesCarriageType =
+          carriageTypeFilter === "all" ||
+          normalizedCarriage === normalizedFilter;
+        const matchesBadge =
+          badgeFilter === "all" || carrier.carrier_badge === badgeFilter;
 
-    return (
-      matchesSearch &&
-      matchesGender &&
-      matchesState &&
-      matchesCarriageType &&
-      matchesTransaction
-    );
-  });
+        return (
+          matchesSearch && matchesState && matchesCarriageType && matchesBadge
+        );
+      }),
+    [allCarriers, badgeFilter, carriageTypeFilter, searchQuery, stateFilter],
+  );
 
   // Pagination
   const totalPages = Math.ceil(filteredCarriers?.length / itemsPerPage);
@@ -208,16 +251,6 @@ export default function CarriersPage() {
                 className="pl-9"
               />
             </div>
-            <Select value={genderFilter} onValueChange={setGenderFilter}>
-              <SelectTrigger className="w-full md:w-[150px]">
-                <SelectValue placeholder="Gender" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Genders</SelectItem>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={stateFilter} onValueChange={setStateFilter}>
               <SelectTrigger className="w-full md:w-[150px]">
                 <SelectValue placeholder="State" />
@@ -240,24 +273,22 @@ export default function CarriersPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="Walker">Walker</SelectItem>
-                <SelectItem value="Bicycle">Bicycle</SelectItem>
-                <SelectItem value="Motorcycle">Motorcycle</SelectItem>
-                <SelectItem value="Car">Car</SelectItem>
+                <SelectItem value="walker">Walker</SelectItem>
+                <SelectItem value="bike">Bicycle</SelectItem>
+                <SelectItem value="motor-cycle">Motorcycle</SelectItem>
+                <SelectItem value="car">Car</SelectItem>
+                <SelectItem value="truck">Truck</SelectItem>
               </SelectContent>
             </Select>
-            <Select
-              value={transactionFilter}
-              onValueChange={setTransactionFilter}
-            >
-              <SelectTrigger className="w-full md:w-[150px]">
-                <SelectValue placeholder="Transactions" />
+            <Select value={badgeFilter} onValueChange={setBadgeFilter}>
+              <SelectTrigger className="w-full md:w-[170px]">
+                <SelectValue placeholder="Badge" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Transactions</SelectItem>
-                <SelectItem value="high">High (50+)</SelectItem>
-                <SelectItem value="medium">Medium (20-49)</SelectItem>
-                <SelectItem value="low">Low (&lt;20)</SelectItem>
+                <SelectItem value="all">All Badges</SelectItem>
+                <SelectItem value="Verified">Verified</SelectItem>
+                <SelectItem value="Verified Pro">Verified Pro</SelectItem>
+                <SelectItem value="Verified Max">Verified Max</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -275,9 +306,8 @@ export default function CarriersPage() {
                   <TableHead>Carriage Type</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Joined</TableHead>
-                  <TableHead>Also Sender</TableHead>
-                  <TableHead>Verified</TableHead>
-                  <TableHead>Transactions</TableHead>
+                  <TableHead>Badge</TableHead>
+                  <TableHead>Online</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -296,39 +326,50 @@ export default function CarriersPage() {
                     <TableRow key={carrier.id}>
                       <TableCell>
                         <Avatar>
+                          <AvatarImage
+                            src={carrier.profile_image || ""}
+                            alt={
+                              `${carrier.first_name || ""} ${
+                                carrier.last_name || ""
+                              }`.trim() || "Carrier"
+                            }
+                          />
                           <AvatarFallback className="bg-gray-200">
                             <UserIcon className="h-5 w-5 text-gray-500" />
                           </AvatarFallback>
                         </Avatar>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {`${carrier.firstname} ${carrier.lastname}`}
+                        {`${carrier.first_name} ${carrier.last_name}`}
                       </TableCell>
-                      <TableCell>{carrier.phone}</TableCell>
+                      <TableCell>{carrier.phone_number}</TableCell>
                       <TableCell>{carrier.email}</TableCell>
                       <TableCell>{carrier.state}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{carrier.carriageType}</Badge>
+                        <Badge variant="outline">
+                          {carrier.carriage_type || "-"}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{carrier.role}</Badge>
                       </TableCell>
-                      <TableCell>{carrier.joined}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={carrier.isSender ? "default" : "outline"}
-                        >
-                          {carrier.isSender ? "Yes" : "No"}
+                        {carrier.created_at
+                          ? new Date(carrier.created_at).toLocaleDateString()
+                          : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {carrier.carrier_badge || "-"}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={carrier.isVerified ? "default" : "outline"}
+                          variant={carrier.is_online ? "default" : "outline"}
                         >
-                          {carrier.isVerified ? "Yes" : "No"}
+                          {carrier.is_online ? "Online" : "Offline"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{carrier._count.transactions}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -349,7 +390,7 @@ export default function CarriersPage() {
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem  className="text-green-600 focus:text-green-600 focus:bg-green-50">
+                            <DropdownMenuItem className="text-green-600 focus:text-green-600 focus:bg-green-50">
                               <Link
                                 href={`/admin/dashboard/carriers/${carrier.id}`}
                               >

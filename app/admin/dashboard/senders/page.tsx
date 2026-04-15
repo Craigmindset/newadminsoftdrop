@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -62,14 +62,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useAdminProvider } from "@/contexts/AdminContext";
-import Loading from "./loading";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Mock data - replace with actual data fetching
 
 export default function SendersPage() {
-  const adminProvider = useAdminProvider()
   const [searchQuery, setSearchQuery] = useState("");
   const [genderFilter, setGenderFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
@@ -84,12 +81,54 @@ export default function SendersPage() {
     email: "",
   });
   
-  let [allSenders, setAllSenders] = useState<any>(adminProvider?.senders ? adminProvider.senders?.data : [])
+  const [allSenders, setAllSenders] = useState<any[]>([])
 
-  useEffect(()=>{
-    setAllSenders(adminProvider?.senders?.data)
-  }, [adminProvider?.senders])
-  console.log("all senders", allSenders)
+  useEffect(() => {
+    let active = true;
+    const cacheKey = "admin:senders:v1";
+
+    async function loadSenders() {
+      try {
+        const cachedRaw = sessionStorage.getItem(cacheKey);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (active && Array.isArray(cached?.data)) {
+            setAllSenders(cached.data);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to read cached senders", error);
+      }
+
+      const response = await fetch("/api/admin/senders");
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = await response.json();
+      if (!active) {
+        return;
+      }
+
+      const nextData = payload.data || [];
+      setAllSenders(nextData);
+
+      try {
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({ data: nextData, fetchedAt: Date.now() }),
+        );
+      } catch (error) {
+        console.error("Failed to cache senders", error);
+      }
+    }
+
+    loadSenders();
+
+    return () => {
+      active = false;
+    };
+  }, []);
   // Array.from({ length: 45 }, (_, i) => ({
   //   id: `sender-${i + 1}`,
   //   profileImage: `https://api.dicebear.com/7.x/avatars/svg?seed=${i}`,
@@ -113,25 +152,36 @@ export default function SendersPage() {
   const itemsPerPage = 20;
 
   // Filter senders
-  const filteredSenders = allSenders?.filter((sender: any) => {
-    const matchesSearch =
-      sender?.firstname.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sender?.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sender?.phone.includes(searchQuery);
+  const filteredSenders = useMemo(() =>
+    allSenders?.filter((sender: any) => {
+      const matchesSearch =
+        sender?.first_name
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        sender?.last_name
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        sender?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sender?.phone_number?.includes(searchQuery);
 
-    const matchesGender =
-      genderFilter === "all" || sender.gender === genderFilter;
-    const matchesState = stateFilter === "all" || sender.state === stateFilter;
-    const matchesTransaction =
-      transactionFilter === "all" ||
-      (transactionFilter === "high" && sender.transactions >= 50) ||
-      (transactionFilter === "medium" &&
-        sender.transactions >= 20 &&
-        sender.transactions < 50) ||
-      (transactionFilter === "low" && sender.transactions < 20);
+      const matchesGender =
+        genderFilter === "all" ||
+        String(sender?.gender || "").toLowerCase() ===
+          genderFilter.toLowerCase();
+      const matchesState = stateFilter === "all" || sender.state === stateFilter;
+      const transactions = Number(sender?.transactions || 0);
+      const matchesTransaction =
+        transactionFilter === "all" ||
+        (transactionFilter === "high" && transactions >= 50) ||
+        (transactionFilter === "medium" &&
+          transactions >= 20 &&
+          transactions < 50) ||
+        (transactionFilter === "low" && transactions < 20);
 
-    return matchesSearch && matchesGender && matchesState && matchesTransaction;
-  });
+      return matchesSearch && matchesGender && matchesState && matchesTransaction;
+    }),
+    [allSenders, genderFilter, searchQuery, stateFilter, transactionFilter],
+  );
 
   // Pagination
   const totalPages = Math.ceil(filteredSenders?.length / itemsPerPage);
@@ -203,8 +253,8 @@ export default function SendersPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Genders</SelectItem>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
               </SelectContent>
             </Select>
             <Select value={stateFilter} onValueChange={setStateFilter}>
@@ -268,29 +318,41 @@ export default function SendersPage() {
                     <TableRow key={sender.id}>
                       <TableCell>
                         <Avatar>
+                          <AvatarImage
+                            src={sender.profile_image || ""}
+                            alt={`${sender.first_name || ""} ${
+                              sender.last_name || ""
+                            }`.trim() || "Sender"}
+                          />
                           <AvatarFallback className="bg-gray-200">
                             <UserIcon className="h-5 w-5 text-gray-500" />
                           </AvatarFallback>
                         </Avatar>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {`${sender.firstname} ${sender.lastname}`}
+                        {`${sender.first_name || ""} ${
+                          sender.last_name || ""
+                        }`.trim() || "-"}
                       </TableCell>
-                      <TableCell>{sender.phone}</TableCell>
+                      <TableCell>{sender.phone_number || "-"}</TableCell>
                       <TableCell>{sender.email}</TableCell>
                       <TableCell>{sender.state}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{sender.role}</Badge>
-                      </TableCell>
-                      <TableCell>{sender.joined}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={sender.isCarrier ? "default" : "outline"}
-                        >
-                          {sender.isCarrier ? "Yes" : "No"}
+                        <Badge variant="secondary">
+                          {sender.role || "Sender"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{sender.transactions}</TableCell>
+                      <TableCell>
+                        {sender.created_at
+                          ? new Date(sender.created_at).toLocaleDateString()
+                          : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={sender.is_carrier ? "default" : "outline"}>
+                          {sender.is_carrier ? "Yes" : "No"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{sender.transactions || 0}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

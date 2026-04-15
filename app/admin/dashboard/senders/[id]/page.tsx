@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -8,7 +8,6 @@ import {
   Phone,
   MapPin,
   Calendar,
-  CreditCard,
   Package,
   User,
 } from "lucide-react";
@@ -22,40 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-// Mock data - replace with actual data fetching
-const getSenderDetails = (id: string) => {
-  const senderNumber = parseInt(id.split("-")[1]) || 1;
-  return {
-    id,
-    profileImage: `https://api.dicebear.com/7.x/avatars/svg?seed=${senderNumber}`,
-    username: `sender${senderNumber}`,
-    fullName: `Sender User ${senderNumber}`,
-    phoneNumber: `+234${Math.floor(Math.random() * 9000000000 + 1000000000)}`,
-    email: `sender${senderNumber}@example.com`,
-    role: "Sender",
-    joined: new Date(
-      2023 + Math.floor(Math.random() * 2),
-      Math.floor(Math.random() * 12),
-      Math.floor(Math.random() * 28) + 1
-    ).toLocaleDateString(),
-    isCarrier: Math.random() > 0.5,
-    transactions: Math.floor(Math.random() * 100),
-    gender: Math.random() > 0.5 ? "Male" : "Female",
-    state: ["Lagos", "Abuja", "Kano", "Rivers", "Oyo"][
-      Math.floor(Math.random() * 5)
-    ],
-    address: "123 Main Street, Victoria Island",
-    dateOfBirth: "1990-05-15",
-    accountStatus: "Active",
-    totalSpent: `₦${(Math.random() * 1000000).toFixed(2)}`,
-    lastActive: new Date(
-      Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
-    ).toLocaleDateString(),
-    verificationStatus: Math.random() > 0.3 ? "Verified" : "Pending",
-  };
-};
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function SenderDetailsPage({
   params,
@@ -64,11 +30,83 @@ export default function SenderDetailsPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const sender = getSenderDetails(id);
+  const [sender, setSender] = useState<any>(null);
+  const [totals, setTotals] = useState({ totalRequests: 0, totalSpent: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSender() {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(`/api/admin/senders/${id}`);
+      if (!response.ok) {
+        if (!active) {
+          return;
+        }
+        setError("Unable to load sender details");
+        setLoading(false);
+        return;
+      }
+
+      const payload = await response.json();
+      if (!active) {
+        return;
+      }
+
+      setSender(payload.data || null);
+      setTotals({
+        totalRequests: Number(payload?.totals?.totalRequests || 0),
+        totalSpent: Number(payload?.totals?.totalSpent || 0),
+      });
+      setLoading(false);
+    }
+
+    loadSender();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const verificationInfo = useMemo(() => {
+    if (typeof sender?.is_verified === "boolean") {
+      return sender.is_verified ? "Verified" : "Pending";
+    }
+    return sender?.verification_status || "-";
+  }, [sender]);
+
+  const formatValue = (value: any) => {
+    if (value === null || value === undefined || value === "") {
+      return "-";
+    }
+    return String(value);
+  };
+
+  const formatDate = (value: any) => {
+    if (!value) {
+      return "-";
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return String(value);
+    }
+    return parsed.toLocaleString();
+  };
+
+  const formatGender = (value: any) => {
+    const normalized = String(value || "").toLowerCase();
+    if (!normalized) {
+      return "-";
+    }
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
@@ -81,42 +119,40 @@ export default function SenderDetailsPage({
         </div>
       </div>
 
-      {/* Profile Overview */}
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
             <Avatar className="h-20 w-20">
+              <AvatarImage
+                src={sender?.profile_image || ""}
+                alt={`${sender?.first_name || ""} ${
+                  sender?.last_name || ""
+                }`.trim() || "Sender"}
+              />
               <AvatarFallback className="bg-gray-200">
                 <User className="h-10 w-10 text-gray-500" />
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <CardTitle className="text-2xl">{sender.fullName}</CardTitle>
-                <Badge
-                  variant={
-                    sender.accountStatus === "Active" ? "default" : "secondary"
-                  }
-                >
-                  {sender.accountStatus}
+                <CardTitle className="text-2xl">
+                  {sender
+                    ? `${sender.first_name || ""} ${
+                        sender.last_name || ""
+                      }`.trim() || "-"
+                    : "-"}
+                </CardTitle>
+                <Badge variant={sender?.is_active ? "default" : "secondary"}>
+                  {sender?.is_active ? "Active" : "Inactive"}
                 </Badge>
               </div>
               <CardDescription className="text-base">
-                @{sender.username}
+                {sender?.email || "-"}
               </CardDescription>
               <div className="flex flex-wrap gap-2 mt-3">
-                <Badge variant="outline">{sender.role}</Badge>
-                {sender.isCarrier && (
-                  <Badge variant="secondary">Also Carrier</Badge>
-                )}
-                <Badge
-                  variant={
-                    sender.verificationStatus === "Verified"
-                      ? "default"
-                      : "outline"
-                  }
-                >
-                  {sender.verificationStatus}
+                <Badge variant="outline">{sender?.role || "Sender"}</Badge>
+                <Badge variant={verificationInfo === "Verified" ? "default" : "outline"}>
+                  {verificationInfo}
                 </Badge>
               </div>
             </div>
@@ -124,8 +160,12 @@ export default function SenderDetailsPage({
         </CardHeader>
       </Card>
 
+      {loading && (
+        <div className="text-sm text-gray-500">Loading sender details...</div>
+      )}
+      {!loading && error && <div className="text-sm text-red-600">{error}</div>}
+
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Personal Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -136,27 +176,37 @@ export default function SenderDetailsPage({
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm font-medium text-gray-500">Full Name</p>
-              <p className="text-base">{sender.fullName}</p>
+              <p className="text-base">
+                {sender
+                  ? `${sender.first_name || ""} ${
+                      sender.last_name || ""
+                    }`.trim() || "-"
+                  : "-"}
+              </p>
             </div>
             <Separator />
             <div>
-              <p className="text-sm font-medium text-gray-500">Username</p>
-              <p className="text-base">@{sender.username}</p>
+              <p className="text-sm font-medium text-gray-500">Sender ID</p>
+              <p className="text-base">{formatValue(sender?.id)}</p>
+            </div>
+            <Separator />
+            <div>
+              <p className="text-sm font-medium text-gray-500">User ID</p>
+              <p className="text-base">{formatValue(sender?.user_id)}</p>
             </div>
             <Separator />
             <div>
               <p className="text-sm font-medium text-gray-500">Gender</p>
-              <p className="text-base">{sender.gender}</p>
+              <p className="text-base">{formatGender(sender?.gender)}</p>
             </div>
             <Separator />
             <div>
               <p className="text-sm font-medium text-gray-500">Date of Birth</p>
-              <p className="text-base">{sender.dateOfBirth}</p>
+              <p className="text-base">{formatValue(sender?.birth_date)}</p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Contact Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -171,7 +221,7 @@ export default function SenderDetailsPage({
                 <p className="text-sm font-medium text-gray-500">
                   Email Address
                 </p>
-                <p className="text-base">{sender.email}</p>
+                <p className="text-base">{formatValue(sender?.email)}</p>
               </div>
             </div>
             <Separator />
@@ -181,7 +231,7 @@ export default function SenderDetailsPage({
                 <p className="text-sm font-medium text-gray-500">
                   Phone Number
                 </p>
-                <p className="text-base">{sender.phoneNumber}</p>
+                <p className="text-base">{formatValue(sender?.phone_number)}</p>
               </div>
             </div>
             <Separator />
@@ -189,14 +239,15 @@ export default function SenderDetailsPage({
               <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-gray-500">Address</p>
-                <p className="text-base">{sender.address}</p>
-                <p className="text-sm text-gray-500">{sender.state} State</p>
+                <p className="text-base">{formatValue(sender?.address)}</p>
+                <p className="text-sm text-gray-500">
+                  {formatValue(sender?.state)} State
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Account Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -207,45 +258,25 @@ export default function SenderDetailsPage({
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm font-medium text-gray-500">Date Joined</p>
-              <p className="text-base">{sender.joined}</p>
+              <p className="text-base">{formatDate(sender?.created_at)}</p>
             </div>
             <Separator />
             <div>
-              <p className="text-sm font-medium text-gray-500">Last Active</p>
-              <p className="text-base">{sender.lastActive}</p>
-            </div>
-            <Separator />
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Account Status
-              </p>
-              <Badge
-                variant={
-                  sender.accountStatus === "Active" ? "default" : "secondary"
-                }
-              >
-                {sender.accountStatus}
-              </Badge>
+              <p className="text-sm font-medium text-gray-500">Updated At</p>
+              <p className="text-base">{formatDate(sender?.updated_at)}</p>
             </div>
             <Separator />
             <div>
               <p className="text-sm font-medium text-gray-500">
                 Verification Status
               </p>
-              <Badge
-                variant={
-                  sender.verificationStatus === "Verified"
-                    ? "default"
-                    : "outline"
-                }
-              >
-                {sender.verificationStatus}
+              <Badge variant={verificationInfo === "Verified" ? "default" : "outline"}>
+                {verificationInfo}
               </Badge>
             </div>
           </CardContent>
         </Card>
 
-        {/* Activity Summary */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -256,31 +287,25 @@ export default function SenderDetailsPage({
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm font-medium text-gray-500">
-                Total Transactions
+                Total Requests
               </p>
-              <p className="text-2xl font-bold">{sender.transactions}</p>
+              <p className="text-2xl font-bold">
+                {totals.totalRequests.toLocaleString()}
+              </p>
             </div>
             <Separator />
             <div>
               <p className="text-sm font-medium text-gray-500">
                 Total Amount Spent
               </p>
-              <p className="text-2xl font-bold">{sender.totalSpent}</p>
-            </div>
-            <Separator />
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Also Registered as Carrier
+              <p className="text-2xl font-bold">
+                ₦{totals.totalSpent.toLocaleString()}
               </p>
-              <Badge variant={sender.isCarrier ? "default" : "outline"}>
-                {sender.isCarrier ? "Yes" : "No"}
-              </Badge>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Action Buttons */}
       <Card>
         <CardContent className="flex flex-wrap gap-4 pt-6">
           <Button variant="outline">Edit Information</Button>

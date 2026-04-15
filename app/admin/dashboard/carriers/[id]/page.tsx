@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -10,7 +10,6 @@ import {
   Calendar,
   Package,
   User,
-  CheckCircle2,
   Download,
 } from "lucide-react";
 import {
@@ -23,45 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useAdminProvider } from "@/contexts/AdminContext";
-
-// Mock data - replace with actual data fetching
-const getMockCarrierDetails = (id: string) => {
-  const carrierNumber = parseInt(id.split("-")[1]) || 1;
-  return {
-    id,
-    username: `carrier${carrierNumber}`,
-    fullName: `Carrier User ${carrierNumber}`,
-    phoneNumber: `+234${Math.floor(Math.random() * 9000000000 + 1000000000)}`,
-    email: `carrier${carrierNumber}@example.com`,
-    role: "Carrier",
-    joined: new Date(
-      2023 + Math.floor(Math.random() * 2),
-      Math.floor(Math.random() * 12),
-      Math.floor(Math.random() * 28) + 1
-    ).toLocaleDateString(),
-    isSender: Math.random() > 0.5,
-    isVerified: Math.random() > 0.3,
-    transactions: Math.floor(Math.random() * 100),
-    gender: Math.random() > 0.5 ? "Male" : "Female",
-    state: ["Lagos", "Abuja", "Kano", "Rivers", "Oyo"][
-      Math.floor(Math.random() * 5)
-    ],
-    address: "123 Main Street, Victoria Island",
-    dateOfBirth: "1990-05-15",
-    accountStatus: "Active",
-    totalEarned: `₦${(Math.random() * 1000000).toFixed(2)}`,
-    lastActive: new Date(
-      Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
-    ).toLocaleDateString(),
-    verificationStatus: Math.random() > 0.3 ? "Verified" : "Pending",
-    carriageType: ["Walker", "Bicycle", "Motorcycle", "Car"][
-      Math.floor(Math.random() * 4)
-    ],
-    licenseNumber: `LIC-${Math.floor(Math.random() * 1000000)}`,
-  };
-};
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function CarrierDetailsPage({
   params,
@@ -70,18 +31,118 @@ export default function CarrierDetailsPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const adminProvider = useAdminProvider()
-  let [carrier, setCarrier] = useState<any>(getMockCarrierDetails(id));
+  const [carrier, setCarrier] = useState<any>(null);
+  const [totals, setTotals] = useState({ totalDeliveries: 0, totalEarned: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [savingStatus, setSavingStatus] = useState(false);
 
-  useEffect(()=>{
-    let res = adminProvider?.getSingleUser(id)
-    res?.then((value: any)=>{
-      console.log("value from fetching single user", value)
-      setCarrier(value.data)
-    }).catch((err)=>{
-      console.log("err", err)
-    })
-  }, [])
+  useEffect(() => {
+    let active = true;
+
+    async function loadCarrier() {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(`/api/admin/carriers/${id}`);
+      if (!response.ok) {
+        if (!active) {
+          return;
+        }
+        setError("Unable to load carrier details");
+        setLoading(false);
+        return;
+      }
+
+      const payload = await response.json();
+      if (!active) {
+        return;
+      }
+
+      setCarrier(payload.data || null);
+      setTotals({
+        totalDeliveries: Number(payload?.totals?.totalDeliveries || 0),
+        totalEarned: Number(payload?.totals?.totalEarned || 0),
+      });
+      setLoading(false);
+    }
+
+    loadCarrier();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const verificationInfo = useMemo(() => {
+    const checks = [
+      Boolean(carrier?.nin_pass),
+      Boolean(carrier?.admin_check),
+      Boolean(carrier?.facial_verify),
+      Boolean(carrier?.otp_pass),
+      Boolean(carrier?.nuban_check),
+    ];
+    const total = checks.length;
+    const passed = checks.filter(Boolean).length;
+    const percent = total > 0 ? Math.round((passed / total) * 100) : 0;
+    const verified = total > 0 && passed === total;
+    return {
+      verified,
+      percent,
+      label: verified ? "Verified" : `Pending (${percent}%)`,
+    };
+  }, [carrier]);
+
+  const formatValue = (value: any) => {
+    if (value === null || value === undefined || value === "") {
+      return "-";
+    }
+    return String(value);
+  };
+
+  const formatDate = (value: any) => {
+    if (!value) {
+      return "-";
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return String(value);
+    }
+    return parsed.toLocaleString();
+  };
+
+  const formatGender = (value: any) => {
+    const normalized = String(value || "").toLowerCase();
+    if (!normalized) {
+      return "-";
+    }
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  };
+
+  const handleToggleSuspend = async () => {
+    if (!carrier?.id) {
+      return;
+    }
+
+    const nextValue = !Boolean(carrier.admin_check);
+    setSavingStatus(true);
+
+    const response = await fetch(`/api/admin/carriers/${carrier.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ admin_check: nextValue }),
+    });
+
+    if (response.ok) {
+      setCarrier((prev: any) => ({ ...prev, admin_check: nextValue }));
+    } else {
+      setError("Unable to update account status");
+    }
+
+    setSavingStatus(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -103,46 +164,51 @@ export default function CarrierDetailsPage({
         <CardHeader>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
             <Avatar className="h-20 w-20">
+              <AvatarImage
+                src={carrier?.profile_image || ""}
+                alt={
+                  `${carrier?.first_name || ""} ${
+                    carrier?.last_name || ""
+                  }`.trim() || "Carrier"
+                }
+              />
               <AvatarFallback className="bg-gray-200">
                 <User className="h-10 w-10 text-gray-500" />
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <CardTitle className="text-2xl">{carrier.firstname} {carrier.lastname}</CardTitle>
-                <Badge
-                  variant={
-                    carrier.isActive ? "default" : "secondary"
-                  }
-                >
-                  {carrier.isActive ? "Active" : "Inactive"}
+                <CardTitle className="text-2xl">
+                  {carrier
+                    ? `${carrier.first_name || ""} ${
+                        carrier.last_name || ""
+                      }`.trim() || "-"
+                    : "-"}
+                </CardTitle>
+                <Badge variant={carrier?.is_online ? "default" : "secondary"}>
+                  {carrier?.is_online ? "Online" : "Offline"}
                 </Badge>
               </div>
               <CardDescription className="text-base">
-                @{carrier.username}
+                {carrier?.email || "-"}
               </CardDescription>
               <div className="flex flex-wrap gap-2 mt-3">
-                <Badge variant="outline">{carrier.role}</Badge>
-                {carrier.isSender && (
-                  <Badge variant="secondary">Also Sender</Badge>
-                )}
+                <Badge variant="outline">{carrier?.role || "Carrier"}</Badge>
                 <Badge
-                  variant={
-                    carrier.verificationStatus === "VERIFIED"
-                      ? "default"
-                      : "outline"
-                  }
+                  variant={verificationInfo.verified ? "default" : "outline"}
                 >
-                  {carrier.verificationStatus === "VERIFIED" ? (
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                  ) : null}
-                  {carrier.verificationStatus}
+                  {verificationInfo.label}
                 </Badge>
               </div>
             </div>
           </div>
         </CardHeader>
       </Card>
+
+      {loading && (
+        <div className="text-sm text-gray-500">Loading carrier details...</div>
+      )}
+      {!loading && error && <div className="text-sm text-red-600">{error}</div>}
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Personal Information */}
@@ -156,22 +222,33 @@ export default function CarrierDetailsPage({
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm font-medium text-gray-500">Full Name</p>
-              <p className="text-base">{carrier.firstname} {carrier.lastname}</p>
+              <p className="text-base">
+                {carrier
+                  ? `${carrier.first_name || ""} ${
+                      carrier.last_name || ""
+                    }`.trim() || "-"
+                  : "-"}
+              </p>
             </div>
             <Separator />
             <div>
               <p className="text-sm font-medium text-gray-500">Carrier ID</p>
-              <p className="text-base">@{carrier.id}</p>
+              <p className="text-base">{formatValue(carrier?.id)}</p>
+            </div>
+            <Separator />
+            <div>
+              <p className="text-sm font-medium text-gray-500">User ID</p>
+              <p className="text-base">{formatValue(carrier?.user_id)}</p>
             </div>
             <Separator />
             <div>
               <p className="text-sm font-medium text-gray-500">Gender</p>
-              <p className="text-base">{carrier.gender}</p>
+              <p className="text-base">{formatGender(carrier?.gender)}</p>
             </div>
             <Separator />
             <div>
               <p className="text-sm font-medium text-gray-500">Date of Birth</p>
-              <p className="text-base">{carrier.dateOfBirth}</p>
+              <p className="text-base">{formatValue(carrier?.birth_date)}</p>
             </div>
           </CardContent>
         </Card>
@@ -191,7 +268,7 @@ export default function CarrierDetailsPage({
                 <p className="text-sm font-medium text-gray-500">
                   Email Address
                 </p>
-                <p className="text-base">{carrier.email}</p>
+                <p className="text-base">{formatValue(carrier?.email)}</p>
               </div>
             </div>
             <Separator />
@@ -201,7 +278,9 @@ export default function CarrierDetailsPage({
                 <p className="text-sm font-medium text-gray-500">
                   Phone Number
                 </p>
-                <p className="text-base">{carrier.phone}</p>
+                <p className="text-base">
+                  {formatValue(carrier?.phone_number)}
+                </p>
               </div>
             </div>
             <Separator />
@@ -209,8 +288,10 @@ export default function CarrierDetailsPage({
               <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-gray-500">Address</p>
-                <p className="text-base">{carrier.address}</p>
-                <p className="text-sm text-gray-500">{carrier.state} State</p>
+                <p className="text-base">{formatValue(carrier?.address)}</p>
+                <p className="text-sm text-gray-500">
+                  {formatValue(carrier?.state)} State
+                </p>
               </div>
             </div>
           </CardContent>
@@ -227,25 +308,30 @@ export default function CarrierDetailsPage({
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm font-medium text-gray-500">Date Joined</p>
-              <p className="text-base">{carrier.createdAt}</p>
+              <p className="text-base">{formatDate(carrier?.created_at)}</p>
             </div>
             <Separator />
             <div>
-              <p className="text-sm font-medium text-gray-500">Last Active</p>
-              <p className="text-base">{carrier.lastActive}</p>
+              <p className="text-sm font-medium text-gray-500">Updated At</p>
+              <p className="text-base">{formatDate(carrier?.updated_at)}</p>
             </div>
             <Separator />
             <div>
               <p className="text-sm font-medium text-gray-500">
-                Account Status
+                Wallet Account
               </p>
-              <Badge
-                variant={
-                  carrier.isActive ? "default" : "secondary"
-                }
-              >
-                {carrier.isActive ? "Active" : "Inactive"}
-              </Badge>
+              <p className="text-base">
+                {formatValue(carrier?.wallet_account)}
+              </p>
+            </div>
+            <Separator />
+            <div>
+              <p className="text-sm font-medium text-gray-500">
+                Wallet Balance
+              </p>
+              <p className="text-base">
+                {formatValue(carrier?.wallet_balance)}
+              </p>
             </div>
             <Separator />
             <div>
@@ -253,24 +339,20 @@ export default function CarrierDetailsPage({
                 Verification Status
               </p>
               <Badge
-                variant={
-                  carrier.verificationStatus === "VERIFIED"
-                    ? "default"
-                    : "outline"
-                }
+                variant={verificationInfo.verified ? "default" : "outline"}
               >
-                {carrier.verificationStatus}
+                {verificationInfo.label}
               </Badge>
             </div>
           </CardContent>
         </Card>
 
-        {/* Activity Summary */}
+        {/* Account Details */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Activity Summary
+              Account Details
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -278,114 +360,93 @@ export default function CarrierDetailsPage({
               <p className="text-sm font-medium text-gray-500">
                 Total Delivery
               </p>
-              <p className="text-2xl font-bold">{carrier?.courierProfile?.totalDeliveries}</p>
+              <p className="text-2xl font-bold">
+                {totals.totalDeliveries.toLocaleString()}
+              </p>
             </div>
             <Separator />
             <div>
               <p className="text-sm font-medium text-gray-500">
                 Total Amount Earned
               </p>
-              <p className="text-2xl font-bold">{carrier.totalEarned}</p>
-            </div>
-            <Separator />
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Also Registered as Sender
+              <p className="text-2xl font-bold">
+                ₦{totals.totalEarned.toLocaleString()}
               </p>
-              <Badge variant={carrier.isSender ? "default" : "outline"}>
-                {carrier.isSender ? "Yes" : "No"}
-              </Badge>
-            </div>
-            <Separator />
-            <div>
-              <p className="text-sm font-medium text-gray-500">Carriage Type</p>
-              <p className="text-base">{carrier?.courierProfile?.vehicleType}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Verification Details */}
+      {/* Carriage Verification Details */}
       <Card>
         <CardHeader>
-          <CardTitle>Verification Details</CardTitle>
+          <CardTitle>Carriage Verification Details</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-6 items-center">
             <div>
-              <p className="text-sm font-medium text-gray-500">
-                License Number
-              </p>
-              <p className="text-base">{carrier.licenseNumber}</p>
-            </div>
-            <div>
               <p className="text-sm font-medium text-gray-500">Carriage Type</p>
-              <p className="text-base">{carrier?.courierProfile?.vehicleType}</p>
+              <p className="text-base">{formatValue(carrier?.carriage_type)}</p>
             </div>
 
-            {/* Conditional fields for Car or Bike */}
-            {(carrier?.courierProfile?.vehicleType === "car" ||
-              carrier?.courierProfile?.vehicleType === "bike") && (
+            {(carrier?.carriage_type === "bike" ||
+              carrier?.carriage_type === "walker") && (
               <>
-                <button
-                  onClick={() => console.log("Download Carriage Document")}
-                  className="flex flex-row gap-3 items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-colors group"
-                  title="Download Carriage Document"
-                >
-                  <Download className="h-5 w-5 text-gray-500 group-hover:text-blue-600 mb-1" />
-                  <p className="text-xs font-medium text-gray-500 group-hover:text-blue-600">
-                    Carriage Document
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Guarantor Name
                   </p>
-                  <p className="text-xs text-gray-400">
-                    DOC-{Math.floor(Math.random() * 1000000)}
+                  <p className="text-base">
+                    {formatValue(carrier?.carriage_guarantor_name)}
                   </p>
-                </button>
-                <button
-                  onClick={() => console.log("Download Driver License")}
-                  className="flex flex-row gap-3 items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-colors group"
-                  title="Download Driver License"
-                >
-                  <Download className="h-5 w-5 text-gray-500 group-hover:text-blue-600 mb-1" />
-                  <p className="text-xs font-medium text-gray-500 group-hover:text-blue-600">
-                    Driver License
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Phone Number
                   </p>
-                  <p className="text-xs text-gray-400">
-                    DL-{Math.floor(Math.random() * 1000000)}
+                  <p className="text-base">
+                    {formatValue(carrier?.carriage_guarantor_contact)}
                   </p>
-                </button>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Address</p>
+                  <p className="text-base">{formatValue(carrier?.address)}</p>
+                </div>
               </>
             )}
 
-            {/* Conditional fields for Walker or Bicycle */}
-            {(carrier?.courierProfile?.vehicleType === "walking" ||
-              carrier?.courierProfile?.vehicleType === "bicycle") && (
+            {(carrier?.carriage_type === "motor-cycle" ||
+              carrier?.carriage_type === "car" ||
+              carrier?.carriage_type === "truck") && (
               <>
-                <button
-                  onClick={() => console.log("Download Utility")}
-                  className="flex flex-row gap-3 items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-colors group"
-                  title="Download Utility"
-                >
-                  <Download className="h-5 w-5 text-gray-500 group-hover:text-blue-600 mb-1" />
-                  <p className="text-xs font-medium text-gray-500 group-hover:text-blue-600">
-                    Utility
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Carriage Reg
                   </p>
-                  <p className="text-xs text-gray-400">
-                    UTL-{Math.floor(Math.random() * 1000000)}
+                  <p className="text-base">
+                    {formatValue(carrier?.carriage_reg)}
                   </p>
-                </button>
-                <button
-                  onClick={() => console.log("Download Guarantor ID")}
-                  className="flex flex-row gap-3 items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-colors group"
-                  title="Download Guarantor ID"
-                >
-                  <Download className="h-5 w-5 text-gray-500 group-hover:text-blue-600 mb-1" />
-                  <p className="text-xs font-medium text-gray-500 group-hover:text-blue-600">
-                    Guarantor ID
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    GID-{Math.floor(Math.random() * 1000000)}
-                  </p>
-                </button>
+                </div>
+                <Button asChild variant="outline">
+                  <a
+                    href={carrier?.carriage_doc_proof || "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Carriage Doc
+                  </a>
+                </Button>
+                <Button asChild variant="outline">
+                  <a
+                    href={carrier?.carriage_type_image || "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Carriage Image
+                  </a>
+                </Button>
               </>
             )}
           </div>
@@ -398,15 +459,23 @@ export default function CarrierDetailsPage({
           <Button variant="outline">Edit Information</Button>
           <Button variant="outline">View Transactions</Button>
           <Button variant="outline">Send Notification</Button>
-          <Button variant="outline">
-            {carrier.isVerified ? "Revoke Verification" : "Verify Carrier"}
+          <Button variant="outline">Verify Carrier</Button>
+          <Button
+            variant={carrier?.admin_check === false ? "outline" : "destructive"}
+            onClick={handleToggleSuspend}
+            disabled={savingStatus}
+            className={
+              carrier?.admin_check === false
+                ? "bg-green-800 text-white hover:bg-green-900"
+                : undefined
+            }
+          >
+            {savingStatus
+              ? "Updating..."
+              : carrier?.admin_check === false
+                ? "Unsuspend Account"
+                : "Suspend Account"}
           </Button>
-          <Button onClick={()=>{
-            adminProvider?.toggleGuarantorOrVehicleDetails(id, carrier?.courierProfile?.vehicleType, {isVerified: true})
-          }} className="bg-green-600 hover:bg-green-700">
-            Approve Carrier
-          </Button>
-          <Button variant="destructive">Suspend Account</Button>
         </CardContent>
       </Card>
     </div>
