@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowDownUp,
@@ -33,163 +33,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 
-// Mock transaction data
-const mockTransactions = [
-  {
-    id: "TRX-12345",
-    date: "2023-09-15T14:30:00",
-    sender: {
-      id: "SND-001",
-      name: "John Doe",
-      email: "john@example.com",
-      avatar: null,
-    },
-    carrier: {
-      id: "CAR-001",
-      name: "Sarah Johnson",
-      email: "sarah@example.com",
-      avatar: null,
-    },
-    amount: 2500,
-    commission: 375, // 15% of 2500
-    status: "completed",
-    type: "intracity",
-    paymentMethod: "wallet",
-    itemType: "document",
-  },
-  {
-    id: "TRX-12346",
-    date: "2023-09-15T12:15:00",
-    sender: {
-      id: "SND-002",
-      name: "Emily Wilson",
-      email: "emily@example.com",
-      avatar: null,
-    },
-    carrier: {
-      id: "CAR-002",
-      name: "Michael Brown",
-      email: "michael@example.com",
-      avatar: null,
-    },
-    amount: 3500,
-    commission: 525, // 15% of 3500
-    status: "completed",
-    type: "interstate",
-    paymentMethod: "card",
-    itemType: "package",
-  },
-  {
-    id: "TRX-12347",
-    date: "2023-09-15T10:45:00",
-    sender: {
-      id: "SND-003",
-      name: "Robert Smith",
-      email: "robert@example.com",
-      avatar: null,
-    },
-    carrier: {
-      id: "CAR-003",
-      name: "Jessica Lee",
-      email: "jessica@example.com",
-      avatar: null,
-    },
-    amount: 1800,
-    commission: 270, // 15% of 1800
-    status: "in-transit",
-    type: "intracity",
-    paymentMethod: "wallet",
-    itemType: "document",
-  },
-  {
-    id: "TRX-12348",
-    date: "2023-09-14T16:20:00",
-    sender: {
-      id: "SND-004",
-      name: "David Clark",
-      email: "david@example.com",
-      avatar: null,
-    },
-    carrier: {
-      id: "CAR-004",
-      name: "Amanda Wilson",
-      email: "amanda@example.com",
-      avatar: null,
-    },
-    amount: 4200,
-    commission: 630, // 15% of 4200
-    status: "completed",
-    type: "interstate",
-    paymentMethod: "card",
-    itemType: "fragile",
-  },
-  {
-    id: "TRX-12349",
-    date: "2023-09-14T09:10:00",
-    sender: {
-      id: "SND-005",
-      name: "Jennifer Adams",
-      email: "jennifer@example.com",
-      avatar: null,
-    },
-    carrier: {
-      id: "CAR-005",
-      name: "Daniel Johnson",
-      email: "daniel@example.com",
-      avatar: null,
-    },
-    amount: 2200,
-    commission: 330, // 15% of 2200
-    status: "cancelled",
-    type: "intracity",
-    paymentMethod: "wallet",
-    itemType: "document",
-  },
-  {
-    id: "TRX-12350",
-    date: "2023-09-13T15:40:00",
-    sender: {
-      id: "SND-001",
-      name: "John Doe",
-      email: "john@example.com",
-      avatar: null,
-    },
-    carrier: {
-      id: "CAR-002",
-      name: "Michael Brown",
-      email: "michael@example.com",
-      avatar: null,
-    },
-    amount: 3000,
-    commission: 450, // 15% of 3000
-    status: "completed",
-    type: "interstate",
-    paymentMethod: "card",
-    itemType: "package",
-  },
-  {
-    id: "TRX-12351",
-    date: "2023-09-13T11:25:00",
-    sender: {
-      id: "SND-002",
-      name: "Emily Wilson",
-      email: "emily@example.com",
-      avatar: null,
-    },
-    carrier: {
-      id: "CAR-001",
-      name: "Sarah Johnson",
-      email: "sarah@example.com",
-      avatar: null,
-    },
-    amount: 1500,
-    commission: 225, // 15% of 1500
-    status: "pending",
-    type: "intracity",
-    paymentMethod: "wallet",
-    itemType: "document",
-  },
-];
+const COMMISSION_RATE = 0.05;
 
 // Calculate financial metrics
 const calculateMetrics = (transactions: typeof mockTransactions) => {
@@ -227,50 +71,112 @@ const calculateMetrics = (transactions: typeof mockTransactions) => {
 
 export default function TransactionsPage() {
   const router = useRouter();
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [transactionType, setTransactionType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [timeframe, setTimeframe] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Filter transactions based on filters
-  const filteredTransactions = mockTransactions.filter((transaction) => {
-    const matchesType =
-      transactionType === "all" || transaction.type === transactionType;
-    const matchesStatus =
-      statusFilter === "all" || transaction.status === statusFilter;
-    const matchesSearch =
-      transaction.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.sender.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      transaction.carrier.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
+  useEffect(() => {
+    let active = true;
 
-    // Simple timeframe filter (in a real app, you'd use proper date filtering)
-    let matchesTimeframe = true;
-    if (timeframe === "today") {
-      matchesTimeframe =
-        new Date(transaction.date).toDateString() === new Date().toDateString();
-    } else if (timeframe === "week") {
-      const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      matchesTimeframe = new Date(transaction.date) >= weekAgo;
-    } else if (timeframe === "month") {
-      const now = new Date();
-      const monthAgo = new Date(
-        now.getFullYear(),
-        now.getMonth() - 1,
-        now.getDate()
-      );
-      matchesTimeframe = new Date(transaction.date) >= monthAgo;
+    async function loadTransactions() {
+      setLoading(true);
+      const response = await fetch("/api/admin/transactions");
+      if (!response.ok) {
+        setLoading(false);
+        return;
+      }
+
+      const payload = await response.json();
+      if (!active) {
+        return;
+      }
+
+      setTransactions(payload.data || []);
+      setLoading(false);
     }
 
-    return matchesType && matchesStatus && matchesSearch && matchesTimeframe;
-  });
+    loadTransactions();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Filter transactions based on filters
+  const filteredTransactions = useMemo(() =>
+    transactions.filter((transaction) => {
+      const matchesType =
+        transactionType === "all" || transaction.route === transactionType;
+      const matchesStatus =
+        statusFilter === "all" || transaction.status === statusFilter;
+      const senderName = String(transaction?.sender?.name || "").toLowerCase();
+      const carrierName = String(transaction?.carrier?.name || "").toLowerCase();
+      const matchesSearch =
+        String(transaction.id || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        senderName.includes(searchQuery.toLowerCase()) ||
+        carrierName.includes(searchQuery.toLowerCase());
+
+      let matchesTimeframe = true;
+      const createdAt = transaction.date ? new Date(transaction.date) : null;
+      if (createdAt) {
+        if (timeframe === "today") {
+          matchesTimeframe =
+            createdAt.toDateString() === new Date().toDateString();
+        } else if (timeframe === "week") {
+          const now = new Date();
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          matchesTimeframe = createdAt >= weekAgo;
+        } else if (timeframe === "month") {
+          const now = new Date();
+          const monthAgo = new Date(
+            now.getFullYear(),
+            now.getMonth() - 1,
+            now.getDate(),
+          );
+          matchesTimeframe = createdAt >= monthAgo;
+        }
+      }
+
+      return matchesType && matchesStatus && matchesSearch && matchesTimeframe;
+    }),
+    [searchQuery, statusFilter, timeframe, transactionType, transactions],
+  );
 
   // Calculate metrics for filtered transactions
-  const metrics = calculateMetrics(filteredTransactions);
+  const metrics = useMemo(() => {
+    const totalTransactions = filteredTransactions.length;
+    const totalAmount = filteredTransactions.reduce(
+      (sum, trx) => sum + Number(trx.amount || 0),
+      0,
+    );
+    const totalCommission = totalAmount * COMMISSION_RATE;
+    const completedTransactions = filteredTransactions.filter(
+      (trx) => trx.status === "completed",
+    );
+    const completedAmount = completedTransactions.reduce(
+      (sum, trx) => sum + Number(trx.amount || 0),
+      0,
+    );
+    const completedCommission = completedAmount * COMMISSION_RATE;
+
+    return {
+      totalTransactions,
+      totalAmount,
+      totalCommission,
+      completedTransactions: completedTransactions.length,
+      completedAmount,
+      completedCommission,
+      averageTransaction:
+        totalTransactions > 0 ? totalAmount / totalTransactions : 0,
+      averageCommission:
+        totalTransactions > 0 ? totalCommission / totalTransactions : 0,
+    };
+  }, [filteredTransactions]);
 
   const handleViewTransaction = (id: string) => {
     router.push(`/admin/dashboard/transactions/${id}`);
@@ -360,10 +266,11 @@ export default function TransactionsPage() {
           className="w-full md:w-auto"
           onValueChange={setTransactionType}
         >
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="all">All Types</TabsTrigger>
-            <TabsTrigger value="intracity">Intracity</TabsTrigger>
-            <TabsTrigger value="interstate">Interstate</TabsTrigger>
+            <TabsTrigger value="intra">Intracity</TabsTrigger>
+            <TabsTrigger value="inter">Interstate</TabsTrigger>
+            <TabsTrigger value="international">International</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -386,7 +293,8 @@ export default function TransactionsPage() {
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="in-transit">In Transit</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="accepted">Accepted</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
@@ -433,7 +341,7 @@ export default function TransactionsPage() {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-medium text-sm">
-                    Transaction ID
+                    Package ID
                   </th>
                   <th className="text-left py-3 px-4 font-medium text-sm">
                     Date
@@ -465,11 +373,15 @@ export default function TransactionsPage() {
                     className="border-b border-gray-100 last:border-0"
                   >
                     <td className="py-3 px-4">
-                      <span className="font-medium">{transaction.id}</span>
+                      <span className="font-medium">
+                        {String(transaction.id || "").slice(-7)}
+                      </span>
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm">
-                        {new Date(transaction.date).toLocaleString()}
+                        {transaction.date
+                          ? new Date(transaction.date).toLocaleString()
+                          : "-"}
                       </span>
                     </td>
                     <td className="py-3 px-4">
@@ -477,18 +389,18 @@ export default function TransactionsPage() {
                         <Avatar className="h-6 w-6">
                           <AvatarImage
                             src={
-                              transaction.sender.avatar ||
-                              `/placeholder.svg?height=24&width=24&text=${transaction.sender.name.charAt(
-                                0
-                              )}`
+                              transaction.sender?.avatar ||
+                              `/placeholder.svg?height=24&width=24&text=${
+                                transaction.sender?.name?.charAt(0) || "?"
+                              }`
                             }
                           />
                           <AvatarFallback>
-                            {transaction.sender.name.charAt(0)}
+                            {transaction.sender?.name?.charAt(0) || "?"}
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-sm">
-                          {transaction.sender.name}
+                          {transaction.sender?.name || "-"}
                         </span>
                       </div>
                     </td>
@@ -497,29 +409,32 @@ export default function TransactionsPage() {
                         <Avatar className="h-6 w-6">
                           <AvatarImage
                             src={
-                              transaction.carrier.avatar ||
-                              `/placeholder.svg?height=24&width=24&text=${transaction.carrier.name.charAt(
-                                0
-                              )}`
+                              transaction.carrier?.avatar ||
+                              `/placeholder.svg?height=24&width=24&text=${
+                                transaction.carrier?.name?.charAt(0) || "?"
+                              }`
                             }
                           />
                           <AvatarFallback>
-                            {transaction.carrier.name.charAt(0)}
+                            {transaction.carrier?.name?.charAt(0) || "?"}
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-sm">
-                          {transaction.carrier.name}
+                          {transaction.carrier?.name || "-"}
                         </span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm font-medium">
-                        ₦{transaction.amount.toLocaleString()}
+                        ₦{Number(transaction.amount || 0).toLocaleString()}
                       </span>
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm font-medium text-green-600">
-                        ₦{transaction.commission.toLocaleString()}
+                        ₦
+                        {(
+                          Number(transaction.amount || 0) * COMMISSION_RATE
+                        ).toLocaleString()}
                       </span>
                     </td>
                     <td className="py-3 px-4">
@@ -528,15 +443,20 @@ export default function TransactionsPage() {
                         className={
                           transaction.status === "completed"
                             ? "bg-green-100 text-green-800"
-                            : transaction.status === "in-transit"
+                            : transaction.status === "in_progress"
                             ? "bg-blue-100 text-blue-800"
                             : transaction.status === "pending"
                             ? "bg-yellow-100 text-yellow-800"
                             : "bg-red-100 text-red-800"
                         }
                       >
-                        {transaction.status.charAt(0).toUpperCase() +
-                          transaction.status.slice(1)}
+                        {transaction.status
+                          ? transaction.status
+                              .replace(/_/g, " ")
+                              .replace(/\b\w/g, (c: string) =>
+                                c.toUpperCase(),
+                              )
+                          : "-"}
                       </Badge>
                     </td>
                     <td className="py-3 px-4 text-right">
@@ -628,16 +548,17 @@ export default function TransactionsPage() {
                   Intracity Transactions
                 </h3>
                 <div className="text-2xl font-bold">
-                  {
-                    filteredTransactions.filter((t) => t.type === "intracity")
-                      .length
-                  }
+                  {filteredTransactions.filter((t) => t.route === "intra")
+                    .length}
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
                   Commission: ₦
                   {filteredTransactions
-                    .filter((t) => t.type === "intracity")
-                    .reduce((sum, t) => sum + t.commission, 0)
+                    .filter((t) => t.route === "intra")
+                    .reduce(
+                      (sum, t) => sum + Number(t.amount || 0) * COMMISSION_RATE,
+                      0,
+                    )
                     .toLocaleString()}
                 </p>
               </div>
@@ -647,16 +568,17 @@ export default function TransactionsPage() {
                   Interstate Transactions
                 </h3>
                 <div className="text-2xl font-bold">
-                  {
-                    filteredTransactions.filter((t) => t.type === "interstate")
-                      .length
-                  }
+                  {filteredTransactions.filter((t) => t.route === "inter")
+                    .length}
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
                   Commission: ₦
                   {filteredTransactions
-                    .filter((t) => t.type === "interstate")
-                    .reduce((sum, t) => sum + t.commission, 0)
+                    .filter((t) => t.route === "inter")
+                    .reduce(
+                      (sum, t) => sum + Number(t.amount || 0) * COMMISSION_RATE,
+                      0,
+                    )
                     .toLocaleString()}
                 </p>
               </div>
