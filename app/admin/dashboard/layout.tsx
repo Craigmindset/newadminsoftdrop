@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -43,6 +43,7 @@ type SidebarItem = {
     | "senders:view"
     | "carriers:view"
     | "transactions:view"
+    | "wallet:view"
     | "disputes:view"
     | "notifications:view"
     | "analytics:view"
@@ -58,8 +59,8 @@ function NavItem({ href, icon, title, isActive, collapsed }: NavItemProps) {
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 transition-all",
         isActive
-          ? "bg-black text-white"
-          : "text-gray-500 hover:text-black hover:bg-gray-100",
+          ? "bg-foreground text-background"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted",
         collapsed && "justify-center",
       )}
     >
@@ -77,6 +78,8 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [walletVisible, setWalletVisible] = useState(true);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [walletLoading, setWalletLoading] = useState(true);
   const pathname = usePathname();
 
   const mainNavItems: SidebarItem[] = [
@@ -103,6 +106,12 @@ export default function DashboardLayout({
       icon: <CreditCard className="h-5 w-5" />,
       title: "Transactions",
       permission: "transactions:view",
+    },
+    {
+      href: "/admin/dashboard/wallet",
+      icon: <Wallet className="h-5 w-5" />,
+      title: "Wallet",
+      permission: "wallet:view",
     },
     {
       href: "/admin/dashboard/disputes",
@@ -140,16 +149,81 @@ export default function DashboardLayout({
   const visibleMainNavItems = mainNavItems;
   const canSeeSettings = true;
 
+  const formattedWalletBalance =
+    walletBalance === null || Number.isNaN(walletBalance)
+      ? "₦—"
+      : `₦${Number(walletBalance).toLocaleString()}`;
+
+  useEffect(() => {
+    let active = true;
+    const cacheKey = "admin:wallet:v1";
+
+    async function loadWallet() {
+      setWalletLoading(true);
+
+      try {
+        const cachedRaw = sessionStorage.getItem(cacheKey);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (active && cached) {
+            setWalletBalance(
+              cached.wallet_balance !== undefined
+                ? Number(cached.wallet_balance)
+                : null,
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Failed to read wallet cache", error);
+      }
+
+      try {
+        const response = await fetch("/api/admin/wallet");
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+        if (!active) {
+          return;
+        }
+
+        setWalletBalance(
+          data.wallet_balance !== undefined ? Number(data.wallet_balance) : 0,
+        );
+
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(data));
+        } catch (error) {
+          console.error("Failed to write wallet cache", error);
+        }
+      } catch (error) {
+        console.error("Failed to load wallet", error);
+      } finally {
+        if (active) {
+          setWalletLoading(false);
+        }
+      }
+    }
+
+    loadWallet();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
       <aside
         className={cn(
-          "hidden lg:flex flex-col h-screen bg-white border-r border-gray-200 transition-all duration-300 overflow-hidden",
+          "hidden lg:flex flex-col h-screen bg-background border-r border-border transition-all duration-300 overflow-hidden",
           sidebarCollapsed ? "w-20" : "w-64",
         )}
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-border">
           {!sidebarCollapsed && (
             <Link
               href="/admin/dashboard"
@@ -178,7 +252,7 @@ export default function DashboardLayout({
           )}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+            className="p-1 rounded-md hover:bg-muted transition-colors"
             title={sidebarCollapsed ? "Expand" : "Collapse"}
           >
             <ChevronLeft
@@ -206,7 +280,7 @@ export default function DashboardLayout({
             ))}
           </nav>
 
-          <div className="pt-4 mt-4 border-t border-gray-200">
+          <div className="pt-4 mt-4 border-t border-border">
             <nav className="space-y-1">
               {canSeeSettings && (
                 <NavItem
@@ -232,12 +306,12 @@ export default function DashboardLayout({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transition-transform overflow-y-auto lg:hidden hide-scrollbar",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-background border-r border-border transition-transform overflow-y-auto lg:hidden hide-scrollbar",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between h-16 px-4 border-b">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-border">
             <Link
               href="/admin/dashboard"
               className="flex items-center gap-2 font-bold text-xl"
@@ -253,7 +327,7 @@ export default function DashboardLayout({
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="p-1 rounded-md hover:bg-gray-100 lg:hidden"
+              className="p-1 rounded-md hover:bg-muted lg:hidden"
             >
               <X className="h-6 w-6" />
             </button>
@@ -275,7 +349,7 @@ export default function DashboardLayout({
               ))}
             </nav>
 
-            <div className="pt-4 mt-4 border-t border-gray-200">
+            <div className="pt-4 mt-4 border-t border-border">
               <nav className="space-y-1">
                 {canSeeSettings && (
                   <NavItem
@@ -294,54 +368,65 @@ export default function DashboardLayout({
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="sticky top-0 z-40 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 shadow-sm">
+        <header className="sticky top-0 z-40 h-16 bg-background border-b border-border flex items-center justify-between px-4 lg:px-6 shadow-sm">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-md hover:bg-gray-100 lg:hidden"
+              className="p-2 rounded-md hover:bg-muted lg:hidden"
             >
               <Menu className="h-6 w-6" />
             </button>
             <div className="hidden lg:block">
-              <h2 className="text-lg font-semibold text-gray-800">Hi, Admin</h2>
+              <h2 className="text-lg font-semibold text-foreground">Hi, Admin</h2>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             {/* Wallet Balance */}
-            <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <Link
+              href="/admin/dashboard/wallet"
+              className="hidden sm:flex items-center gap-3 px-4 py-2 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow"
+            >
               <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
                 <Wallet className="h-4 w-4 text-white" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs font-medium text-gray-500">
+                <span className="text-xs font-medium text-muted-foreground">
                   Wallet
                 </span>
-                <span className="text-sm font-bold text-gray-900">
-                  {walletVisible ? "₦1,250,000" : "••••••••"}
+                <span className="text-sm font-bold text-foreground">
+                  {walletVisible
+                    ? walletLoading
+                      ? "Loading..."
+                      : formattedWalletBalance
+                    : "••••••••"}
                 </span>
               </div>
               <button
-                onClick={() => setWalletVisible(!walletVisible)}
-                className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setWalletVisible(!walletVisible);
+                }}
+                className="p-1 rounded-md hover:bg-muted transition-colors"
                 title={walletVisible ? "Hide balance" : "Show balance"}
               >
                 {walletVisible ? (
-                  <EyeOff className="h-4 w-4 text-gray-500" />
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <Eye className="h-4 w-4 text-gray-500" />
+                  <Eye className="h-4 w-4 text-muted-foreground" />
                 )}
               </button>
-            </div>
+            </Link>
 
             {/* Broadcast Button */}
-            <button className="p-2.5 rounded-full hover:bg-gray-100 transition-colors">
-              <Radio className="h-5 w-5 text-gray-700" />
+            <button className="p-2.5 rounded-full hover:bg-muted transition-colors">
+              <Radio className="h-5 w-5 text-foreground" />
             </button>
 
             {/* Notifications */}
-            <button className="relative p-2.5 rounded-full hover:bg-gray-100 transition-colors">
-              <Bell className="h-5 w-5 text-gray-700" />
+            <button className="relative p-2.5 rounded-full hover:bg-muted transition-colors">
+              <Bell className="h-5 w-5 text-foreground" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
             </button>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   CreditCard,
   DollarSign,
@@ -24,6 +25,7 @@ export default function AdminDashboard() {
   const [totalCarriers, setTotalCarriers] = useState<number>(0);
   const [totalDeliveries, setTotalDeliveries] = useState<number>(0);
   const [completedRevenue, setCompletedRevenue] = useState<number>(0);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   const stats = useMemo(
     () => ({
@@ -85,6 +87,59 @@ export default function AdminDashboard() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    const cacheKey = "admin:wallet:v1";
+
+    async function loadWallet() {
+      try {
+        const cachedRaw = sessionStorage.getItem(cacheKey);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (active && cached) {
+            setWalletBalance(
+              cached.wallet_balance !== undefined
+                ? Number(cached.wallet_balance)
+                : null,
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Failed to read wallet cache", error);
+      }
+
+      try {
+        const response = await fetch("/api/admin/wallet");
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+        if (!active) {
+          return;
+        }
+
+        setWalletBalance(
+          data.wallet_balance !== undefined ? Number(data.wallet_balance) : 0,
+        );
+
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(data));
+        } catch (error) {
+          console.error("Failed to write wallet cache", error);
+        }
+      } catch (error) {
+        console.error("Failed to load wallet", error);
+      }
+    }
+
+    loadWallet();
+
+    return () => {
+      active = false;
+    };
+  }, []);
   const recentActivities = [
     {
       type: "user_registration",
@@ -122,8 +177,12 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-gray-500">Welcome to your admin dashboard</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground">
+            Welcome to your admin dashboard
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Tabs defaultValue="weekly" className="w-[300px]">
@@ -138,62 +197,66 @@ export default function AdminDashboard() {
 
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-blue-500 bg-blue-50/50">
+        <Card className="border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-500/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900">
+            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
               Total Sender
             </CardTitle>
             <Users className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-900">
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
               {stats.totalSenders.toLocaleString()}
             </div>
-            <p className="text-xs text-blue-600">Active senders in Supabase</p>
+            <p className="text-xs text-blue-600 dark:text-blue-200">
+              Active senders in Supabase
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500 bg-green-50/50">
+        <Card className="border-l-4 border-l-green-500 bg-green-50/50 dark:bg-green-500/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-900">
+            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
               Total Carrier
             </CardTitle>
             <Truck className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-900">
+            <div className="text-2xl font-bold text-green-900 dark:text-green-100">
               {stats.totalCarriers.toLocaleString()}
             </div>
-            <p className="text-xs text-green-600">
+            <p className="text-xs text-green-600 dark:text-green-200">
               +{stats.weeklyGrowth}% from last week
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-red-500 bg-red-50/50 cursor-pointer hover:bg-red-100/50 transition-colors">
+        <Card className="border-l-4 border-l-red-500 bg-red-50/50 cursor-pointer hover:bg-red-100/50 transition-colors dark:bg-red-500/10 dark:hover:bg-red-500/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-red-900">
+            <CardTitle className="text-sm font-medium text-red-900 dark:text-red-100">
               Total Delivery
             </CardTitle>
             <ShieldAlert className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-900">
+            <div className="text-2xl font-bold text-red-900 dark:text-red-100">
               {stats.totalDeliveries.toLocaleString()}
             </div>
-            <p className="text-xs text-red-600">All recorded transactions</p>
+            <p className="text-xs text-red-600 dark:text-red-200">
+              All recorded transactions
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500 bg-purple-50/50 cursor-pointer hover:bg-purple-100/50 transition-colors">
+        <Card className="border-l-4 border-l-purple-500 bg-purple-50/50 cursor-pointer hover:bg-purple-100/50 transition-colors dark:bg-purple-500/10 dark:hover:bg-purple-500/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-900">
+            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">
               Revenue
             </CardTitle>
             <DollarSign className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-900">
+            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
               ₦{stats.revenue.toLocaleString()}
             </div>
             <div className="flex items-center pt-1">
@@ -205,6 +268,48 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border border-amber-200/70 bg-gradient-to-br from-amber-50 via-background to-emerald-50 dark:from-amber-500/10 dark:via-background dark:to-emerald-500/10">
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-base font-semibold text-foreground">
+              Admin Wallet
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Live balance synced from Supabase
+            </CardDescription>
+          </div>
+          <Link
+            href="/admin/dashboard/wallet"
+            className="inline-flex items-center rounded-full border border-amber-200/70 bg-background px-4 py-2 text-xs font-semibold text-foreground shadow-sm transition hover:border-amber-300/80"
+          >
+            View wallet
+          </Link>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2">
+            <p className="text-3xl font-bold text-foreground">
+              {walletBalance === null
+                ? "₦—"
+                : `₦${Number(walletBalance).toLocaleString()}`}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/dashboard/wallet"
+              className="inline-flex items-center justify-center rounded-xl bg-foreground px-4 py-2 text-sm font-semibold text-background shadow-sm transition hover:bg-foreground/90"
+            >
+              Transfer funds
+            </Link>
+            <Link
+              href="/admin/dashboard/transactions"
+              className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:border-foreground/20"
+            >
+              View payouts
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Dispute Statistics */}
       <Suspense
