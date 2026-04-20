@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 function resolveSupabaseKey() {
   if (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
@@ -46,13 +46,32 @@ if (process.env.NODE_ENV === "development") {
   console.log("Supabase Key Length:", supabaseAnonKey.length || 0);
 }
 
-// Create the Supabase client directly
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+function createSupabaseClient(): SupabaseClient | null {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  });
+}
+
+// Defer creation until env is present to avoid build-time crashes.
+export const supabase: SupabaseClient =
+  createSupabaseClient() ??
+  (new Proxy(
+    {},
+    {
+      get() {
+        throw new Error(
+          "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and a public Supabase key.",
+        );
+      },
+    },
+  ) as SupabaseClient);
 
 // Helper function to check if Supabase is properly configured
 export function isSupabaseConfigured() {
