@@ -8,7 +8,6 @@ import {
   CreditCard,
   Download,
   Eye,
-  Filter,
   Search,
   TrendingUp,
 } from "lucide-react";
@@ -19,7 +18,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +31,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 
-const COMMISSION_RATE = 0.05;
+const TRANSACTIONS_CACHE_KEY = "admin:transactions:v1";
+const TRANSACTIONS_CACHE_TTL_MS = 5 * 60 * 1000;
 
 // Calculate financial metrics
 const calculateMetrics = (transactions: typeof mockTransactions) => {
@@ -80,12 +79,36 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     let active = true;
+    let usedCache = false;
 
     async function loadTransactions() {
-      setLoading(true);
+      try {
+        const cachedRaw = sessionStorage.getItem(TRANSACTIONS_CACHE_KEY);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (
+            cached?.data &&
+            cached?.timestamp &&
+            Date.now() - cached.timestamp < TRANSACTIONS_CACHE_TTL_MS
+          ) {
+            setTransactions(cached.data || []);
+            setLoading(false);
+            usedCache = true;
+          }
+        }
+      } catch (error) {
+        console.error("Failed to read transactions cache", error);
+      }
+
+      if (!usedCache) {
+        setLoading(true);
+      }
+
       const response = await fetch("/api/admin/transactions");
       if (!response.ok) {
-        setLoading(false);
+        if (!usedCache) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -94,8 +117,18 @@ export default function TransactionsPage() {
         return;
       }
 
-      setTransactions(payload.data || []);
+      const nextData = payload.data || [];
+      setTransactions(nextData);
       setLoading(false);
+
+      try {
+        sessionStorage.setItem(
+          TRANSACTIONS_CACHE_KEY,
+          JSON.stringify({ data: nextData, timestamp: Date.now() }),
+        );
+      } catch (error) {
+        console.error("Failed to write transactions cache", error);
+      }
     }
 
     loadTransactions();
@@ -149,20 +182,30 @@ export default function TransactionsPage() {
 
   // Calculate metrics for filtered transactions
   const metrics = useMemo(() => {
-    const totalTransactions = filteredTransactions.length;
+    const completedTransactions = filteredTransactions.filter(
+      (trx) => trx.status === "completed",
+    );
+    const totalTransactions = completedTransactions.length;
     const totalAmount = filteredTransactions.reduce(
       (sum, trx) => sum + Number(trx.amount || 0),
       0,
     );
-    const totalCommission = totalAmount * COMMISSION_RATE;
-    const completedTransactions = filteredTransactions.filter(
-      (trx) => trx.status === "completed",
+    const totalCommission = filteredTransactions.reduce(
+      (sum, trx) => sum + Number(trx.deliveryCommission || 0),
+      0,
     );
     const completedAmount = completedTransactions.reduce(
       (sum, trx) => sum + Number(trx.amount || 0),
       0,
     );
-    const completedCommission = completedAmount * COMMISSION_RATE;
+    const completedCommission = completedTransactions.reduce(
+      (sum, trx) => sum + Number(trx.deliveryCommission || 0),
+      0,
+    );
+    const averageCommission =
+      filteredTransactions.length > 0
+        ? totalCommission / filteredTransactions.length
+        : 0;
 
     return {
       totalTransactions,
@@ -173,13 +216,80 @@ export default function TransactionsPage() {
       completedCommission,
       averageTransaction:
         totalTransactions > 0 ? totalAmount / totalTransactions : 0,
-      averageCommission:
-        totalTransactions > 0 ? totalCommission / totalTransactions : 0,
+      averageCommission,
     };
   }, [filteredTransactions]);
 
   const handleViewTransaction = (id: string) => {
     router.push(`/admin/dashboard/transactions/${id}`);
+  };
+
+  const handleExportPdf = async () => {
+    const [{ jsPDF }, autoTableModule] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+    const autoTable = autoTableModule.default;
+    const doc = new jsPDF({ orientation: "landscape" });
+
+    const completedCount = filteredTransactions.filter(
+      (trx) => trx.status === "completed",
+    ).length;
+    const pendingCancelCount = filteredTransactions.filter(
+      (trx) => trx.status === "pending" || trx.status === "cancelled",
+    ).length;
+    const dates = filteredTransactions
+      .map((trx) => (trx.date ? new Date(trx.date) : null))
+      .filter((value): value is Date => value instanceof Date);
+    const sortedDates = dates.sort((a, b) => a.getTime() - b.getTime());
+    const durationStart = sortedDates[0]
+      ? sortedDates[0].toLocaleDateString()
+      : "-";
+    const durationEnd = sortedDates[sortedDates.length - 1]
+      ? sortedDates[sortedDates.length - 1].toLocaleDateString()
+      : "-";
+
+    doc.setFontSize(16);
+    doc.text("SoftDrop Transaction Table", 14, 16);
+    doc.setFontSize(10);
+    doc.text(
+      `Transaction Summary: Total Delivery ${filteredTransactions.length} | Completed Delivery ${completedCount} | Pending/Cancel Delivery ${pendingCancelCount} | Duration ${durationStart} to ${durationEnd}`,
+      14,
+      22,
+    );
+
+    const rows = filteredTransactions.map((transaction) => [
+      String(transaction.id || "").slice(-7),
+      transaction.date ? new Date(transaction.date).toLocaleString() : "-",
+      transaction.sender?.name || "-",
+      transaction.carrier?.name || "-",
+      `₦${Number(transaction.amount || 0).toLocaleString()}`,
+      `₦${Number(transaction.deliveryCommission || 0).toLocaleString()}`,
+      transaction.status
+        ? transaction.status
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (c: string) => c.toUpperCase())
+        : "-",
+    ]);
+
+    autoTable(doc, {
+      head: [[
+        "Package ID",
+        "Date",
+        "Sender",
+        "Carrier",
+        "Amount",
+        "Commission",
+        "Status",
+      ]],
+      body: rows,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [30, 41, 59] },
+      margin: { top: 30, left: 14, right: 14 },
+      startY: 30,
+    });
+
+    doc.save(`transactions-${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
   return (
@@ -192,8 +302,8 @@ export default function TransactionsPage() {
       </div>
 
       {/* Financial Summary */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+      <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Transactions
@@ -205,12 +315,12 @@ export default function TransactionsPage() {
               {metrics.totalTransactions}
             </div>
             <p className="text-xs text-gray-500">
-              {metrics.completedTransactions} completed
+              Completed deliveries
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Transaction Volume
@@ -228,7 +338,7 @@ export default function TransactionsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Commission
@@ -239,11 +349,11 @@ export default function TransactionsPage() {
             <div className="text-2xl font-bold">
               ₦{metrics.totalCommission.toLocaleString()}
             </div>
-            <p className="text-xs text-gray-500">5% of transaction volume</p>
+            <p className="text-xs text-gray-500">From delivery commission</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Average Commission
@@ -254,33 +364,32 @@ export default function TransactionsPage() {
             <div className="text-2xl font-bold">
               ₦{Math.round(metrics.averageCommission).toLocaleString()}
             </div>
-            <p className="text-xs text-gray-500">Per transaction</p>
+            <p className="text-xs text-gray-500">Average per delivery</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <Tabs
-          defaultValue="all"
-          className="w-full md:w-auto"
-          onValueChange={setTransactionType}
-        >
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">All Types</TabsTrigger>
-            <TabsTrigger value="intra">Intracity</TabsTrigger>
-            <TabsTrigger value="inter">Interstate</TabsTrigger>
-            <TabsTrigger value="international">International</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <Select value={transactionType} onValueChange={setTransactionType}>
+          <SelectTrigger className="w-full md:w-[160px]">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="inter">Interstate</SelectItem>
+            <SelectItem value="intra">Intracity</SelectItem>
+            <SelectItem value="international">International</SelectItem>
+          </SelectContent>
+        </Select>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input
               type="search"
               placeholder="Search transactions..."
-              className="w-full md:w-[200px] pl-9"
+              className="w-full md:w-[260px] pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -312,15 +421,15 @@ export default function TransactionsPage() {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" className="h-9 w-9">
             <Calendar className="h-4 w-4" />
           </Button>
 
-          <Button variant="outline" size="icon">
-            <Filter className="h-4 w-4" />
-          </Button>
-
-          <Button variant="outline" className="gap-2">
+          <Button
+            variant="outline"
+            className="gap-2 transition-opacity active:opacity-70"
+            onClick={handleExportPdf}
+          >
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -356,7 +465,7 @@ export default function TransactionsPage() {
                     Amount
                   </th>
                   <th className="text-left py-3 px-4 font-medium text-sm">
-                    Commission (15%)
+                    Commission
                   </th>
                   <th className="text-left py-3 px-4 font-medium text-sm">
                     Status
@@ -432,8 +541,8 @@ export default function TransactionsPage() {
                     <td className="py-3 px-4">
                       <span className="text-sm font-medium text-green-600">
                         ₦
-                        {(
-                          Number(transaction.amount || 0) * COMMISSION_RATE
+                        {Number(
+                          transaction.deliveryCommission || 0,
                         ).toLocaleString()}
                       </span>
                     </td>
@@ -556,7 +665,7 @@ export default function TransactionsPage() {
                   {filteredTransactions
                     .filter((t) => t.route === "intra")
                     .reduce(
-                      (sum, t) => sum + Number(t.amount || 0) * COMMISSION_RATE,
+                      (sum, t) => sum + Number(t.deliveryCommission || 0),
                       0,
                     )
                     .toLocaleString()}
@@ -576,7 +685,7 @@ export default function TransactionsPage() {
                   {filteredTransactions
                     .filter((t) => t.route === "inter")
                     .reduce(
-                      (sum, t) => sum + Number(t.amount || 0) * COMMISSION_RATE,
+                      (sum, t) => sum + Number(t.deliveryCommission || 0),
                       0,
                     )
                     .toLocaleString()}
@@ -584,10 +693,12 @@ export default function TransactionsPage() {
               </div>
 
               <div className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-sm font-medium mb-1">Commission Rate</h3>
-                <div className="text-2xl font-bold">5%</div>
+                <h3 className="text-sm font-medium mb-1">Average Commission</h3>
+                <div className="text-2xl font-bold">
+                  ₦{Math.round(metrics.averageCommission).toLocaleString()}
+                </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  Of total transaction value
+                  Across filtered transactions
                 </p>
               </div>
             </div>

@@ -420,15 +420,13 @@ export default function DashboardLayout({
             </Link>
 
             {/* Broadcast Button */}
-            <button className="p-2.5 rounded-full hover:bg-muted transition-colors">
+            <Link
+              href="/admin/dashboard/notifications"
+              className="p-2.5 rounded-full hover:bg-muted transition-colors"
+              aria-label="Open notifications"
+            >
               <Radio className="h-5 w-5 text-foreground" />
-            </button>
-
-            {/* Notifications */}
-            <button className="relative p-2.5 rounded-full hover:bg-muted transition-colors">
-              <Bell className="h-5 w-5 text-foreground" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-            </button>
+            </Link>
 
             {/* Profile */}
             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm">

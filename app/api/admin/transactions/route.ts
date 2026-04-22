@@ -7,7 +7,7 @@ export async function GET() {
   const { data: deliveries, error } = await supabaseAdmin
     .from("delivery_request")
     .select(
-      "id,user_id,carrier_id,route,item_type,delivery_method,status,amount,payment_status,created_at",
+      "id,user_id,carrier_id,route,item_type,delivery_method,status,amount,delivery_commission,payment_status,created_at",
     )
     .order("created_at", { ascending: false });
 
@@ -62,6 +62,7 @@ export async function GET() {
       status: row.status,
       paymentStatus: row.payment_status,
       amount: row.amount ?? 0,
+      deliveryCommission: row.delivery_commission ?? 0,
       sender: sender
         ? {
             id: sender.user_id || sender.id,

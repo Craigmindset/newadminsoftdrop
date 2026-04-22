@@ -26,6 +26,7 @@ export default function AdminDashboard() {
   const [totalDeliveries, setTotalDeliveries] = useState<number>(0);
   const [completedRevenue, setCompletedRevenue] = useState<number>(0);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
 
   const stats = useMemo(
     () => ({
@@ -140,38 +141,40 @@ export default function AdminDashboard() {
       active = false;
     };
   }, []);
-  const recentActivities = [
-    {
-      type: "user_registration",
-      id: "1",
-      timestamp: new Date().toISOString(),
-      data: {
+  useEffect(() => {
+    setRecentActivities([
+      {
+        type: "user_registration",
         id: "1",
-        role: "carrier",
-        full_name: "John Doe",
+        timestamp: new Date().toISOString(),
+        data: {
+          id: "1",
+          role: "carrier",
+          full_name: "John Doe",
+        },
       },
-    },
-    {
-      type: "transaction",
-      id: "2",
-      timestamp: new Date().toISOString(),
-      data: {
+      {
+        type: "transaction",
         id: "2",
-        amount: 50000,
-        type: "payment",
+        timestamp: new Date().toISOString(),
+        data: {
+          id: "2",
+          amount: 50000,
+          type: "payment",
+        },
       },
-    },
-    {
-      type: "dispute",
-      id: "3",
-      timestamp: new Date().toISOString(),
-      data: {
+      {
+        type: "dispute",
         id: "3",
-        status: "pending",
-        resolution: null,
+        timestamp: new Date().toISOString(),
+        data: {
+          id: "3",
+          status: "pending",
+          resolution: null,
+        },
       },
-    },
-  ];
+    ]);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -226,7 +229,7 @@ export default function AdminDashboard() {
               {stats.totalCarriers.toLocaleString()}
             </div>
             <p className="text-xs text-green-600 dark:text-green-200">
-              +{stats.weeklyGrowth}% from last week
+              Total active carrier
             </p>
           </CardContent>
         </Card>
@@ -262,7 +265,7 @@ export default function AdminDashboard() {
             <div className="flex items-center pt-1">
               <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
               <p className="text-xs text-green-500">
-                +{stats.weeklyGrowth}% from last week
+                Total delivery transaction
               </p>
             </div>
           </CardContent>
@@ -275,9 +278,6 @@ export default function AdminDashboard() {
             <CardTitle className="text-base font-semibold text-foreground">
               Admin Wallet
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Live balance synced from Supabase
-            </CardDescription>
           </div>
           <Link
             href="/admin/dashboard/wallet"

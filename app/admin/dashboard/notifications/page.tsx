@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Search, AlertTriangle, Info, CheckCircle2, Users, UserCircle, Truck } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -12,79 +12,16 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
-// Sample notification data - in a real app, this would come from an API
-const sampleNotifications = [
-  {
-    id: 1,
-    title: "System Maintenance",
-    message: "The system will be down for maintenance on Sunday from 2 AM to 4 AM.",
-    target: "all",
-    priority: "high",
-    createdAt: "2023-11-15T08:00:00Z",
-    readCount: 850,
-    totalRecipients: 1050,
-  },
-  {
-    id: 2,
-    title: "New Feature: Real-time Tracking",
-    message: "We've added real-time tracking for all shipments. Check it out!",
-    target: "all",
-    priority: "medium",
-    createdAt: "2023-11-10T10:30:00Z",
-    readCount: 920,
-    totalRecipients: 1050,
-  },
-  {
-    id: 3,
-    title: "Carrier Onboarding Update",
-    message: "We've simplified the carrier onboarding process. New carriers can now be verified within 24 hours.",
-    target: "carriers",
-    priority: "medium",
-    createdAt: "2023-11-05T14:15:00Z",
-    readCount: 380,
-    totalRecipients: 400,
-  },
-  {
-    id: 4,
-    title: "Holiday Schedule",
-    message: "Please note our modified operating hours during the upcoming holiday season.",
-    target: "all",
-    priority: "low",
-    createdAt: "2023-11-01T09:45:00Z",
-    readCount: 780,
-    totalRecipients: 1050,
-  },
-  {
-    id: 5,
-    title: "Sender Promotion: Free Shipping",
-    message: "Use code FREESHIP for free shipping on your next 3 deliveries!",
-    target: "senders",
-    priority: "high",
-    createdAt: "2023-10-28T11:20:00Z",
-    readCount: 590,
-    totalRecipients: 650,
-  },
-  {
-    id: 6,
-    title: "Carrier Incentive Program",
-    message: "Complete 10 deliveries this week and earn a 5% bonus on all trips!",
-    target: "carriers",
-    priority: "high",
-    createdAt: "2023-10-25T13:10:00Z",
-    readCount: 350,
-    totalRecipients: 400,
-  },
-  {
-    id: 7,
-    title: "App Update Available",
-    message: "Version 2.5 is now available with improved performance and bug fixes.",
-    target: "all",
-    priority: "medium",
-    createdAt: "2023-10-20T15:30:00Z",
-    readCount: 920,
-    totalRecipients: 1050,
-  },
-]
+type NotificationRow = {
+  id: string
+  title: string
+  message: string
+  target: "all" | "senders" | "carriers"
+  priority: "high" | "medium" | "low"
+  created_at: string
+  sent_count: number
+  failed_count: number
+}
 
 export default function NotificationsPage() {
   const { toast } = useToast()
@@ -96,9 +33,39 @@ export default function NotificationsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [targetFilter, setTargetFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
+  const [isSending, setIsSending] = useState(false)
+  const [notifications, setNotifications] = useState<NotificationRow[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadHistory() {
+      setHistoryLoading(true)
+      const response = await fetch("/api/admin/notifications")
+      if (!response.ok) {
+        setHistoryLoading(false)
+        return
+      }
+
+      const payload = await response.json()
+      if (!active) {
+        return
+      }
+
+      setNotifications(payload.data || [])
+      setHistoryLoading(false)
+    }
+
+    loadHistory()
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   // Filter notifications based on search query and filters
-  const filteredNotifications = sampleNotifications
+  const filteredNotifications = notifications
     .filter(
       (notification) =>
         notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -106,9 +73,9 @@ export default function NotificationsPage() {
     )
     .filter((notification) => (targetFilter === "all" ? true : notification.target === targetFilter))
     .filter((notification) => (priorityFilter === "all" ? true : notification.priority === priorityFilter))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
-  const handleSendNotification = () => {
+  const handleSendNotification = async () => {
     if (!title.trim() || !message.trim()) {
       toast({
         title: "Error",
@@ -118,11 +85,33 @@ export default function NotificationsPage() {
       return
     }
 
-    // In a real app, this would send the notification to an API
-    toast({
-      title: "Notification Sent",
-      description: `Your notification has been sent to ${target === "all" ? "all users" : target}`,
-    })
+    try {
+      setIsSending(true)
+      const response = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, message, target, priority }),
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.error || "Unable to send notification")
+      }
+
+      const payload = await response.json().catch(() => ({}))
+      toast({
+        title: "Notification Sent",
+        description: `Sent ${payload?.sent ?? 0} notification(s).`,
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Unable to send notification",
+        variant: "destructive",
+      })
+      setIsSending(false)
+      return
+    }
 
     // Reset form
     setTitle("")
@@ -130,8 +119,27 @@ export default function NotificationsPage() {
     setTarget("all")
     setPriority("medium")
 
+    try {
+      const historyResponse = await fetch("/api/admin/notifications")
+      if (historyResponse.ok) {
+        const historyPayload = await historyResponse.json()
+        setNotifications(historyPayload.data || [])
+      }
+    } catch (error) {
+      console.error("Failed to refresh notification history", error)
+    }
+
     // Switch to history tab
     setActiveTab("history")
+    setIsSending(false)
+  }
+
+  const handleReuseNotification = (notification: NotificationRow) => {
+    setTitle(notification.title)
+    setMessage(notification.message)
+    setTarget(notification.target)
+    setPriority(notification.priority)
+    setActiveTab("create")
   }
 
   const getPriorityBadge = (priority) => {
@@ -199,7 +207,7 @@ export default function NotificationsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Create New Notification</CardTitle>
-              <CardDescription>Send notifications to users based on their role and set priority levels</CardDescription>
+              <CardDescription>Send notifications to users with Expo push tokens</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -237,7 +245,7 @@ export default function NotificationsPage() {
                       <SelectValue placeholder="Select target audience" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Users</SelectItem>
+                      <SelectItem value="all">All Users (Senders + Carriers)</SelectItem>
                       <SelectItem value="senders">Senders Only</SelectItem>
                       <SelectItem value="carriers">Carriers Only</SelectItem>
                     </SelectContent>
@@ -262,8 +270,8 @@ export default function NotificationsPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={handleSendNotification} className="w-full">
-                Send Notification
+              <Button onClick={handleSendNotification} className="w-full" disabled={isSending}>
+                {isSending ? "Sending..." : "Send Notification"}
               </Button>
             </CardFooter>
           </Card>
@@ -321,13 +329,21 @@ export default function NotificationsPage() {
                       <TableHead className="hidden md:table-cell">Target</TableHead>
                       <TableHead>Priority</TableHead>
                       <TableHead className="hidden md:table-cell">Date</TableHead>
-                      <TableHead>Read Rate</TableHead>
+                      <TableHead>Sent</TableHead>
+                      <TableHead>Failed</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredNotifications.length === 0 ? (
+                    {historyLoading ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-4">
+                        <TableCell colSpan={7} className="text-center py-4">
+                          Loading notification history...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredNotifications.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-4">
                           No notifications found
                         </TableCell>
                       </TableRow>
@@ -351,19 +367,17 @@ export default function NotificationsPage() {
                             </div>
                           </TableCell>
                           <TableCell>{getPriorityBadge(notification.priority)}</TableCell>
-                          <TableCell className="hidden md:table-cell">{formatDate(notification.createdAt)}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="w-full max-w-[100px] h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-green-500 rounded-full"
-                                  style={{ width: `${(notification.readCount / notification.totalRecipients) * 100}%` }}
-                                />
-                              </div>
-                              <span className="text-xs whitespace-nowrap">
-                                {Math.round((notification.readCount / notification.totalRecipients) * 100)}%
-                              </span>
-                            </div>
+                          <TableCell className="hidden md:table-cell">{formatDate(notification.created_at)}</TableCell>
+                          <TableCell>{notification.sent_count}</TableCell>
+                          <TableCell>{notification.failed_count}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleReuseNotification(notification)}
+                            >
+                              Reuse
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))

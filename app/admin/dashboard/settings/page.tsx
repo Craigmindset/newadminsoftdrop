@@ -123,24 +123,18 @@ export default function SettingsPage() {
               <RadioGroup
                 value={theme || "system"}
                 onValueChange={setTheme}
-                className="gap-3"
+                className="grid gap-3 md:grid-cols-3"
               >
                 <label className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
                   <RadioGroupItem value="dark" />
                   <div>
                     <p className="text-sm font-medium text-foreground">Dark</p>
-                    <p className="text-xs text-muted-foreground">
-                      Default for low-light workspaces
-                    </p>
                   </div>
                 </label>
                 <label className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
                   <RadioGroupItem value="light" />
                   <div>
                     <p className="text-sm font-medium text-foreground">Light</p>
-                    <p className="text-xs text-muted-foreground">
-                      Bright, high-contrast layout
-                    </p>
                   </div>
                 </label>
                 <label className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
@@ -148,9 +142,6 @@ export default function SettingsPage() {
                   <div>
                     <p className="text-sm font-medium text-foreground">
                       System
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Sync with device preference
                     </p>
                   </div>
                 </label>

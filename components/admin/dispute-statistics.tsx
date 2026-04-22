@@ -47,8 +47,8 @@ export function DisputeStatistics() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
-          <CardTitle>Dispute Statistics</CardTitle>
-          <CardDescription>Overview of platform disputes and resolutions</CardDescription>
+          <CardTitle>Delivery Routes</CardTitle>
+          <CardDescription>Overview of delivery routes and statuses</CardDescription>
         </div>
         <Tabs
           defaultValue={timeframe}
@@ -81,7 +81,7 @@ export function DisputeStatistics() {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <ShieldAlert className="h-5 w-5 text-gray-500" />
-                  <h3 className="text-sm font-medium">Total Disputes</h3>
+                  <h3 className="text-sm font-medium">Total Delivery</h3>
                 </div>
                 <div className="text-2xl font-bold">{stats.total}</div>
               </div>
@@ -89,7 +89,7 @@ export function DisputeStatistics() {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Clock className="h-5 w-5 text-yellow-500" />
-                  <h3 className="text-sm font-medium">Pending</h3>
+                  <h3 className="text-sm font-medium">Cancelled Delivery</h3>
                 </div>
                 <div className="text-2xl font-bold">{stats.pending}</div>
               </div>
@@ -97,11 +97,11 @@ export function DisputeStatistics() {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <AlertTriangle className="h-5 w-5 text-blue-500" />
-                  <h3 className="text-sm font-medium">In Review</h3>
+                  <h3 className="text-sm font-medium">Completed Delivery</h3>
                 </div>
                 <div className="text-2xl font-bold">{stats.inReview}</div>
               </div>
-
+              {/*
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -109,6 +109,7 @@ export function DisputeStatistics() {
                 </div>
                 <div className="text-2xl font-bold">{stats.resolved}</div>
               </div>
+              */}
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
