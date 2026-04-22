@@ -18,6 +18,20 @@ yarn-error.log*
 
 # env files
 .env*
+.envrc
+.secrets*
+secrets.*
+
+# credentials and keys
+serviceAccount.json
+serviceAccount*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.csr
+*.crt
+*.cert
 
 # vercel
 .vercel
