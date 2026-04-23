@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   CreditCard,
   DollarSign,
+  Package,
   ShieldAlert,
   TrendingUp,
   Truck,
@@ -212,7 +213,7 @@ export default function AdminDashboard() {
               {stats.totalSenders.toLocaleString()}
             </div>
             <p className="text-xs text-blue-600 dark:text-blue-200">
-              Active senders in Supabase
+              Active senders
             </p>
           </CardContent>
         </Card>
@@ -239,7 +240,7 @@ export default function AdminDashboard() {
             <CardTitle className="text-sm font-medium text-red-900 dark:text-red-100">
               Total Delivery
             </CardTitle>
-            <ShieldAlert className="h-4 w-4 text-red-500" />
+            <Package className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-900 dark:text-red-100">

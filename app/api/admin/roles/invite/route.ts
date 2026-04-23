@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-client";
 
-const MIN_PASSWORD_LENGTH = 8;
-
 function getBearerToken(request: Request) {
   const authHeader =
     request.headers.get("authorization") ||
@@ -28,12 +26,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const { email, password } = await request
+  const { email, role } = await request
     .json()
-    .catch(() => ({ email: "", password: "" }));
+    .catch(() => ({ email: "", role: "" }));
   const normalizedEmail =
     typeof email === "string" ? email.trim().toLowerCase() : "";
-  const nextPassword = typeof password === "string" ? password : "";
+  const nextRole = typeof role === "string" ? role : "";
 
   if (!normalizedEmail || !normalizedEmail.includes("@")) {
     return NextResponse.json(
@@ -42,9 +40,9 @@ export async function POST(request: Request) {
     );
   }
 
-  if (nextPassword.length < MIN_PASSWORD_LENGTH) {
+  if (!nextRole || !["super_admin", "manager", "support"].includes(nextRole)) {
     return NextResponse.json(
-      { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` },
+      { error: "Valid role is required" },
       { status: 400 },
     );
   }
@@ -77,50 +75,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  let lookupError: Error | null = null;
-  let targetUserId: string | null = null;
+  const { data: inviteData, error: inviteError } =
+    await supabaseAdmin.auth.admin.inviteUserByEmail(normalizedEmail);
 
-  const perPage = 200;
-  for (let page = 1; page <= 10; page += 1) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-      page,
-      perPage,
-    });
-
-    if (error) {
-      lookupError = error;
-      break;
-    }
-
-    const matchedUser = data.users.find(
-      (user) => user.email?.toLowerCase() === normalizedEmail,
-    );
-    if (matchedUser?.id) {
-      targetUserId = matchedUser.id;
-      break;
-    }
-
-    if (data.users.length < perPage) {
-      break;
-    }
-  }
-
-  if (lookupError || !targetUserId) {
+  if (inviteError || !inviteData?.user?.id) {
     return NextResponse.json(
-      { error: "Target user not found" },
-      { status: 404 },
+      { error: inviteError?.message || "Failed to invite admin" },
+      { status: 500 },
     );
   }
 
-  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-    targetUserId,
-    {
-      password: nextPassword,
-    },
-  );
+  const invitedUserId = inviteData.user.id;
 
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  const { error: upsertError } = await supabaseAdmin
+    .from("admin_profile")
+    .upsert(
+      {
+        id: invitedUserId,
+        email: normalizedEmail,
+        role: nextRole,
+        is_active: true,
+      },
+      { onConflict: "id" },
+    );
+
+  if (upsertError) {
+    return NextResponse.json({ error: upsertError.message }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

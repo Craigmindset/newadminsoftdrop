@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart,
   LineChart,
@@ -15,98 +15,114 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
-} from "recharts"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+} from "recharts";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#4F46E5"]
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#4F46E5"];
 
 export default function AnalyticsPage() {
-  const [timeRange, setTimeRange] = useState("year")
-  const [totalUsers, setTotalUsers] = useState(0)
-  const [transactionVolume, setTransactionVolume] = useState(0)
-  const [totalProfit, setTotalProfit] = useState(0)
-  const [kpiLoading, setKpiLoading] = useState(true)
-  const [userGrowthData, setUserGrowthData] = useState<any[]>([])
-  const [userTypeData, setUserTypeData] = useState<any[]>([])
-  const [transactionData, setTransactionData] = useState<any[]>([])
-  const [profitData, setProfitData] = useState<any[]>([])
-  const [deliveryTypeData, setDeliveryTypeData] = useState<any[]>([])
-  const [routeData, setRouteData] = useState<any[]>([])
-  const [statusData, setStatusData] = useState<any[]>([])
-  const [carrierPerformance, setCarrierPerformance] = useState<any[]>([])
+  const [timeRange, setTimeRange] = useState("year");
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [transactionVolume, setTransactionVolume] = useState(0);
+  const [totalProfit, setTotalProfit] = useState(0);
+  const [kpiLoading, setKpiLoading] = useState(true);
+  const [userGrowthData, setUserGrowthData] = useState<any[]>([]);
+  const [userTypeData, setUserTypeData] = useState<any[]>([]);
+  const [transactionData, setTransactionData] = useState<any[]>([]);
+  const [profitData, setProfitData] = useState<any[]>([]);
+  const [deliveryTypeData, setDeliveryTypeData] = useState<any[]>([]);
+  const [routeData, setRouteData] = useState<any[]>([]);
+  const [statusData, setStatusData] = useState<any[]>([]);
+  const [carrierPerformance, setCarrierPerformance] = useState<any[]>([]);
 
   useEffect(() => {
-    let active = true
+    let active = true;
 
     async function loadKpis() {
-      setKpiLoading(true)
-      const response = await fetch("/api/admin/analytics")
+      setKpiLoading(true);
+      const response = await fetch("/api/admin/analytics");
       if (!response.ok) {
         if (active) {
-          setKpiLoading(false)
+          setKpiLoading(false);
         }
-        return
+        return;
       }
 
-      const data = await response.json()
+      const data = await response.json();
       if (!active) {
-        return
+        return;
       }
 
-      setTotalUsers(Number(data.totalUsers || 0))
-      setTransactionVolume(Number(data.transactionVolume || 0))
-      setTotalProfit(Number(data.totalProfit || 0))
-      setKpiLoading(false)
+      setTotalUsers(Number(data.totalUsers || 0));
+      setTransactionVolume(Number(data.transactionVolume || 0));
+      setTotalProfit(Number(data.totalProfit || 0));
+      setKpiLoading(false);
     }
 
-    loadKpis()
+    loadKpis();
 
     return () => {
-      active = false
-    }
-  }, [])
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
-    let active = true
+    let active = true;
 
     async function loadCharts() {
-      const response = await fetch("/api/admin/analytics/charts")
+      const response = await fetch("/api/admin/analytics/charts");
       if (!response.ok) {
-        return
+        return;
       }
 
-      const data = await response.json()
+      const data = await response.json();
       if (!active) {
-        return
+        return;
       }
 
-      setUserGrowthData(data.userGrowth || [])
+      setUserGrowthData(data.userGrowth || []);
       setUserTypeData([
         { name: "Senders", value: data.userType?.senders || 0 },
         { name: "Carriers", value: data.userType?.carriers || 0 },
-      ])
-      setTransactionData(data.transactionVolume || [])
-      setProfitData(data.profitSeries || [])
-      setDeliveryTypeData(data.deliveryTypes || [])
-      setRouteData(data.routeDistribution || [])
-      setStatusData(data.statusDistribution || [])
-      setCarrierPerformance(data.carrierPerformance || [])
+      ]);
+      setTransactionData(data.transactionVolume || []);
+      setProfitData(data.profitSeries || []);
+      setDeliveryTypeData(data.deliveryTypes || []);
+      setRouteData(data.routeDistribution || []);
+      setStatusData(data.statusDistribution || []);
+      setCarrierPerformance(data.carrierPerformance || []);
     }
 
-    loadCharts()
+    loadCharts();
 
     return () => {
-      active = false
-    }
-  }, [])
+      active = false;
+    };
+  }, []);
 
   const deliveryColors = useMemo(
     () => COLORS.slice(0, deliveryTypeData.length || 1),
     [deliveryTypeData.length],
-  )
+  );
 
   return (
     <div className="space-y-6">
@@ -129,37 +145,49 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Users
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {kpiLoading ? "—" : totalUsers.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Senders + carriers</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Senders + carriers
+            </p>
           </CardContent>
         </Card>
 
         <Card className="h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Transaction Volume</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Transaction Volume
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ₦{kpiLoading ? "—" : transactionVolume.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Delivery + airtime volume</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Delivery + airtime volume
+            </p>
           </CardContent>
         </Card>
 
         <Card className="h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Profit</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Profit
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ₦{kpiLoading ? "—" : totalProfit.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Delivery commission total</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Delivery commission total
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -177,7 +205,9 @@ export default function AnalyticsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>User Growth</CardTitle>
-                <CardDescription>Monthly growth of senders and carriers</CardDescription>
+                <CardDescription>
+                  Monthly growth of senders and carriers
+                </CardDescription>
               </CardHeader>
               <CardContent className="h-80 overflow-hidden">
                 <ChartContainer
@@ -194,7 +224,10 @@ export default function AnalyticsPage() {
                   className="h-full"
                 >
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={userGrowthData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                    <LineChart
+                      data={userGrowthData}
+                      margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis />
@@ -207,7 +240,12 @@ export default function AnalyticsPage() {
                         strokeWidth={2}
                         activeDot={{ r: 8 }}
                       />
-                      <Line type="monotone" dataKey="carriers" stroke="var(--color-carriers)" strokeWidth={2} />
+                      <Line
+                        type="monotone"
+                        dataKey="carriers"
+                        stroke="var(--color-carriers)"
+                        strokeWidth={2}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -230,13 +268,20 @@ export default function AnalyticsPage() {
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) =>
+                        `${name}: ${(percent * 100).toFixed(0)}%`
+                      }
                     >
                       {userTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`${value} users`, "Count"]} />
+                    <Tooltip
+                      formatter={(value) => [`${value} users`, "Count"]}
+                    />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -251,11 +296,16 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent className="h-80 overflow-hidden">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={routeData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                <BarChart
+                  data={routeData}
+                  margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
-                  <Tooltip formatter={(value) => [`${value} deliveries`, "Volume"]} />
+                  <Tooltip
+                    formatter={(value) => [`${value} deliveries`, "Volume"]}
+                  />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Bar dataKey="transactions" fill="#8884d8" />
                 </BarChart>
@@ -270,7 +320,9 @@ export default function AnalyticsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Transaction Volume</CardTitle>
-                <CardDescription>Monthly transaction volume in Naira</CardDescription>
+                <CardDescription>
+                  Monthly transaction volume in Naira
+                </CardDescription>
               </CardHeader>
               <CardContent className="h-80 overflow-hidden">
                 <ChartContainer
@@ -283,7 +335,10 @@ export default function AnalyticsPage() {
                   className="h-full"
                 >
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={transactionData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                    <BarChart
+                      data={transactionData}
+                      margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis />
@@ -312,7 +367,10 @@ export default function AnalyticsPage() {
                   className="h-full"
                 >
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={profitData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                    <LineChart
+                      data={profitData}
+                      margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis />
@@ -335,7 +393,9 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Revenue vs Profit</CardTitle>
-              <CardDescription>Comparison of total transaction volume and profit</CardDescription>
+              <CardDescription>
+                Comparison of total transaction volume and profit
+              </CardDescription>
             </CardHeader>
             <CardContent className="h-80 overflow-hidden">
               <ChartContainer
@@ -403,13 +463,20 @@ export default function AnalyticsPage() {
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) =>
+                        `${name}: ${(percent * 100).toFixed(0)}%`
+                      }
                     >
                       {deliveryTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={deliveryColors[index % deliveryColors.length]} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={deliveryColors[index % deliveryColors.length]}
+                        />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`${value}%`, "Percentage"]} />
+                    <Tooltip
+                      formatter={(value) => [`${value}%`, "Percentage"]}
+                    />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -419,11 +486,16 @@ export default function AnalyticsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Carrier Performance</CardTitle>
-                <CardDescription>Top 5 carriers by delivery volume</CardDescription>
+                <CardDescription>
+                  Top 5 carriers by delivery volume
+                </CardDescription>
               </CardHeader>
               <CardContent className="h-80 overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={carrierPerformance} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                  <BarChart
+                    data={carrierPerformance}
+                    margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
@@ -443,11 +515,16 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent className="h-80 overflow-hidden">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={statusData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                <BarChart
+                  data={statusData}
+                  margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="status" />
                   <YAxis />
-                  <Tooltip formatter={(value) => [`${value} deliveries`, "Count"]} />
+                  <Tooltip
+                    formatter={(value) => [`${value} deliveries`, "Count"]}
+                  />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Bar dataKey="count" fill="#8884d8" />
                 </BarChart>
@@ -457,5 +534,5 @@ export default function AnalyticsPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

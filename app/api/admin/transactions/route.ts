@@ -39,7 +39,10 @@ export async function GET() {
   ]);
 
   if (sendersResult.error || carriersResult.error) {
-    return NextResponse.json({ error: "Unable to load transaction parties" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unable to load transaction parties" },
+      { status: 500 },
+    );
   }
 
   const senderMap = new Map(
@@ -51,7 +54,9 @@ export async function GET() {
 
   const transactions = deliveryRows.map((row) => {
     const sender = senderMap.get(row.user_id) || null;
-    const carrier = row.carrier_id ? carrierMap.get(row.carrier_id) || null : null;
+    const carrier = row.carrier_id
+      ? carrierMap.get(row.carrier_id) || null
+      : null;
 
     return {
       id: row.id,

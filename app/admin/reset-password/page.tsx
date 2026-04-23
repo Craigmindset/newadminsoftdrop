@@ -11,6 +11,39 @@ type RecoveryState =
   | { status: "invalid"; message: string }
   | { status: "ready" };
 
+type RecoveryLinkContext = {
+  code?: string | null;
+  accessToken?: string | null;
+  refreshToken?: string | null;
+  tokenHash?: string | null;
+  otpType?: string | null;
+};
+
+async function postAuthDebug(stage: string, payload: Record<string, unknown>) {
+  try {
+    await fetch("/api/admin/auth-debug", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ flow: "reset-password", stage, ...payload }),
+    });
+  } catch {
+    // Best-effort only. Browser console remains the primary debug source.
+  }
+}
+
+async function waitForRecoverySession(maxAttempts = 10, delayMs = 120) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const { data, error } = await supabase.auth.getSession();
+    if (!error && data.session) {
+      return { session: data.session, attempts: attempt };
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+  }
+
+  return { session: null, attempts: maxAttempts };
+}
+
 export default function AdminResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -19,6 +52,11 @@ export default function AdminResetPasswordPage() {
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [recoveryTokens, setRecoveryTokens] = useState<{
+    accessToken: string;
+    refreshToken: string;
+  } | null>(null);
+  const [recoveryContext, setRecoveryContext] = useState<RecoveryLinkContext>({});
   const [recoveryState, setRecoveryState] = useState<RecoveryState>({
     status: "checking",
   });
@@ -27,68 +65,123 @@ export default function AdminResetPasswordPage() {
     let mounted = true;
 
     async function establishRecovery() {
+      const queryParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(
         window.location.hash.replace(/^#/, ""),
       );
-      const queryParams = new URLSearchParams(window.location.search);
-
-      const accessToken =
-        hashParams.get("access_token") || queryParams.get("access_token");
-      const refreshToken =
-        hashParams.get("refresh_token") || queryParams.get("refresh_token");
-      const code = queryParams.get("code") || hashParams.get("code");
+      const code = queryParams.get("code");
       const tokenHash =
         queryParams.get("token_hash") || hashParams.get("token_hash");
-      const type = queryParams.get("type") || hashParams.get("type");
+      const otpType = queryParams.get("type") || hashParams.get("type");
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
       const errorDescription =
-        queryParams.get("error_description") ||
-        hashParams.get("error_description") ||
-        queryParams.get("error") ||
-        hashParams.get("error");
+        queryParams.get("error_description") || queryParams.get("error");
+
+      if (mounted) {
+        setRecoveryContext({
+          code,
+          tokenHash,
+          otpType,
+          accessToken,
+          refreshToken,
+        });
+      }
+
+      console.log("[reset-password] url", window.location.href);
+
+      const paramsSummary = {
+        hasCode: Boolean(code),
+        hasTokenHash: Boolean(tokenHash),
+        otpType: otpType || null,
+        hasAccessToken: Boolean(accessToken),
+        hasRefreshToken: Boolean(refreshToken),
+        errorDescription,
+      };
+
+      console.log("[reset-password] bootstrap", paramsSummary);
+      await postAuthDebug("bootstrap", paramsSummary);
 
       if (errorDescription) {
+        await postAuthDebug("invalid-url", { message: errorDescription });
         setRecoveryState({ status: "invalid", message: errorDescription });
         return;
       }
 
       try {
-        if (accessToken && refreshToken) {
-          const { error: sessionError } = await supabase.auth.setSession({
+        let recoveryMethod = "none";
+
+        if (code) {
+          recoveryMethod = "exchangeCodeForSession";
+          await postAuthDebug("method-exchangeCodeForSession", {});
+          const { data: exchangeData, error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code);
+
+          if (exchangeError) {
+            throw exchangeError;
+          }
+
+          console.log("[reset-password] exchange success", {
+            hasSession: Boolean(exchangeData?.session),
+          });
+          await postAuthDebug("exchange-success", {
+            hasSession: Boolean(exchangeData?.session),
+          });
+        } else if (tokenHash && (otpType === "recovery" || otpType === "invite")) {
+          recoveryMethod = `verifyOtp:${otpType}`;
+          await postAuthDebug("method-verifyOtp", {
+            otpType,
+          });
+
+          const { data: otpData, error: otpError } = await supabase.auth.verifyOtp({
+            type: otpType,
+            token_hash: tokenHash,
+          });
+
+          if (otpError) {
+            throw otpError;
+          }
+
+          await postAuthDebug("verifyOtp-success", {
+            otpType,
+            hasSession: Boolean(otpData?.session),
+          });
+        } else if (accessToken && refreshToken) {
+          recoveryMethod = "setSession";
+          // Supabase recovery links may provide tokens in URL hash.
+          await postAuthDebug("method-setSession", {});
+          const { error: setSessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
 
-          if (sessionError) {
-            throw sessionError;
+          if (setSessionError) {
+            throw setSessionError;
           }
-        } else if (code) {
-          const { error: codeError } =
-            await supabase.auth.exchangeCodeForSession(code);
-          if (codeError) {
-            throw codeError;
-          }
-        } else if (tokenHash && type === "recovery") {
-          const { error: verifyError } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: "recovery",
-          });
 
-          if (verifyError) {
-            throw verifyError;
-          }
+          setRecoveryTokens({ accessToken, refreshToken });
         } else {
+          await postAuthDebug("invalid-no-token", {});
           setRecoveryState({
             status: "invalid",
             message:
-              "No recovery token found. Request a new link and open the newest email.",
+              "No recovery credentials found. Open the latest reset email link.",
           });
           return;
         }
 
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !data.session) {
-          throw sessionError || new Error("No recovery session");
+        const { session, attempts } = await waitForRecoverySession();
+        if (!session) {
+          throw new Error("No recovery session");
         }
+
+        const readyPayload = {
+          hasSession: true,
+          method: recoveryMethod,
+          settleAttempts: attempts,
+        };
+        console.log("[reset-password] session ready", readyPayload);
+        await postAuthDebug("session-ready", readyPayload);
 
         if (!mounted) {
           return;
@@ -101,6 +194,10 @@ export default function AdminResetPasswordPage() {
         );
         setRecoveryState({ status: "ready" });
       } catch (err) {
+        console.log("[reset-password] recovery error", err);
+        await postAuthDebug("recovery-error", {
+          message: err instanceof Error ? err.message : "Unknown recovery error",
+        });
         if (!mounted) {
           return;
         }
@@ -129,23 +226,135 @@ export default function AdminResetPasswordPage() {
 
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
+      await postAuthDebug("validation-error", {
+        reason: "password-too-short",
+      });
       return;
     }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
+      await postAuthDebug("validation-error", {
+        reason: "password-mismatch",
+      });
       return;
     }
 
     setSubmitting(true);
+    console.log("[reset-password] update-start");
+    await postAuthDebug("update-start", {});
+
+    if (recoveryTokens) {
+      const { error: preflightSessionError } = await supabase.auth.setSession({
+        access_token: recoveryTokens.accessToken,
+        refresh_token: recoveryTokens.refreshToken,
+      });
+
+      if (preflightSessionError) {
+        await postAuthDebug("update-error", {
+          message:
+            preflightSessionError.message || "Unable to re-establish session",
+          status: (preflightSessionError as { status?: number }).status || 400,
+        });
+        setError(
+          preflightSessionError.message ||
+            "Unable to re-establish recovery session. Open a new reset link.",
+        );
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    if (
+      !recoveryTokens &&
+      recoveryContext.tokenHash &&
+      (recoveryContext.otpType === "recovery" || recoveryContext.otpType === "invite")
+    ) {
+      const { error: preflightOtpError } = await supabase.auth.verifyOtp({
+        type: recoveryContext.otpType,
+        token_hash: recoveryContext.tokenHash,
+      });
+
+      if (preflightOtpError) {
+        await postAuthDebug("update-error", {
+          message: preflightOtpError.message || "Unable to re-establish OTP session",
+          status: (preflightOtpError as { status?: number }).status || 400,
+        });
+        setError(
+          preflightOtpError.message ||
+            "Unable to re-establish recovery session. Open a new reset link.",
+        );
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    const { session, attempts } = await waitForRecoverySession(8, 100);
+    if (!session) {
+      const errorMessage =
+        "No active recovery session. Open the newest reset email link again.";
+      await postAuthDebug("update-error", {
+        message: errorMessage,
+        status: 400,
+      });
+      setError(errorMessage);
+      setSubmitting(false);
+      return;
+    }
+
+    await postAuthDebug("update-session-ready", { settleAttempts: attempts });
+
     const { error: updateError } = await supabase.auth.updateUser({ password });
     if (updateError) {
+      console.log("[reset-password] update error", updateError);
+      if (updateError.message === "Auth session missing!") {
+        await postAuthDebug("update-retry-session", {
+          reason: "auth-session-missing",
+        });
+
+        if (
+          recoveryContext.tokenHash &&
+          (recoveryContext.otpType === "recovery" || recoveryContext.otpType === "invite")
+        ) {
+          await supabase.auth.verifyOtp({
+            type: recoveryContext.otpType,
+            token_hash: recoveryContext.tokenHash,
+          });
+        } else if (recoveryTokens) {
+          await supabase.auth.setSession({
+            access_token: recoveryTokens.accessToken,
+            refresh_token: recoveryTokens.refreshToken,
+          });
+        }
+
+        const retry = await supabase.auth.updateUser({ password });
+        if (!retry.error) {
+          await postAuthDebug("update-success-after-retry", {});
+          setMessage("Password updated successfully. Redirecting to admin login...");
+          await supabase.auth.signOut();
+          setSubmitting(false);
+          window.setTimeout(() => {
+            router.push("/admin");
+          }, 1200);
+          return;
+        }
+      }
+
+      await postAuthDebug("update-error", {
+        message: updateError.message || "",
+        code: (updateError as { code?: string }).code || "",
+        status: (updateError as { status?: number }).status || null,
+      });
       setError(updateError.message || "Unable to update password");
       setSubmitting(false);
       return;
     }
 
+    console.log("[reset-password] update success");
+    await postAuthDebug("update-success", {});
+
     setMessage("Password updated successfully. Redirecting to admin login...");
+    await supabase.auth.signOut();
     setSubmitting(false);
     window.setTimeout(() => {
       router.push("/admin");

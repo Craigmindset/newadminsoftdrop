@@ -5,6 +5,18 @@ import Link from "next/link";
 import { Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
+async function postAuthDebug(stage: string, payload: Record<string, unknown>) {
+  try {
+    await fetch("/api/admin/auth-debug", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ flow: "forgot-password", stage, ...payload }),
+    });
+  } catch {
+    // Best-effort only. Browser console remains the primary debug source.
+  }
+}
+
 export default function AdminForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -19,6 +31,15 @@ export default function AdminForgotPasswordPage() {
 
     const normalizedEmail = email.trim().toLowerCase();
     const redirectTo = `${window.location.origin}/admin/reset-password`;
+    console.log("[forgot-password] request-start", {
+      email: normalizedEmail,
+      redirectTo,
+    });
+    await postAuthDebug("request-start", {
+      email: normalizedEmail,
+      redirectTo,
+    });
+
     const { error: sendError } = await supabase.auth.resetPasswordForEmail(
       normalizedEmail,
       {
@@ -27,13 +48,24 @@ export default function AdminForgotPasswordPage() {
     );
 
     if (sendError) {
-      setError(sendError.message || "Unable to send recovery email");
+      console.log("[forgot-password] request-error", sendError);
+      await postAuthDebug("request-error", {
+        email: normalizedEmail,
+        message: sendError.message || "",
+        code: (sendError as { code?: string }).code || "",
+        status: (sendError as { status?: number }).status || null,
+      });
+
+      setError(sendError.message || "Unable to send recovery email.");
       setSubmitting(false);
       return;
     }
 
+    console.log("[forgot-password] request-success");
+    await postAuthDebug("request-success", { email: normalizedEmail });
+
     setMessage(
-      "Recovery email sent. Open the latest link to reset your password.",
+      "If this email exists, a password reset link has been sent. Open only the latest email.",
     );
     setSubmitting(false);
   }

@@ -43,7 +43,9 @@ export async function GET() {
     supabaseAdmin.from("carrier_profile").select("created_at"),
     supabaseAdmin
       .from("delivery_request")
-      .select("created_at,amount,delivery_commission,delivery_method,route,status,carrier_id"),
+      .select(
+        "created_at,amount,delivery_commission,delivery_method,route,status,carrier_id",
+      ),
   ]);
 
   if (sendersResult.error || carriersResult.error || deliveriesResult.error) {
@@ -166,18 +168,24 @@ export async function GET() {
     userType,
     transactionVolume,
     profitSeries,
-    deliveryTypes: Array.from(deliveryTypeCounts.entries()).map(([name, value]) => ({
-      name,
-      value,
-    })),
-    routeDistribution: Array.from(routeCounts.entries()).map(([name, transactions]) => ({
-      name,
-      transactions,
-    })),
-    statusDistribution: Array.from(statusCounts.entries()).map(([status, count]) => ({
-      status,
-      count,
-    })),
+    deliveryTypes: Array.from(deliveryTypeCounts.entries()).map(
+      ([name, value]) => ({
+        name,
+        value,
+      }),
+    ),
+    routeDistribution: Array.from(routeCounts.entries()).map(
+      ([name, transactions]) => ({
+        name,
+        transactions,
+      }),
+    ),
+    statusDistribution: Array.from(statusCounts.entries()).map(
+      ([status, count]) => ({
+        status,
+        count,
+      }),
+    ),
     carrierPerformance,
   });
 }

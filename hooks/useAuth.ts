@@ -11,6 +11,15 @@ const DEMO_EMAIL = "admin@softdrop.com";
 const DEMO_PASSWORD = "1234567";
 const DEMO_LOGIN_KEY = "softdropDemoLogin";
 
+function shouldBypassAdminProfileChecks() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const path = window.location.pathname;
+  return path === "/admin/reset-password" || path === "/admin/forgot-password";
+}
+
 function getDemoProfile(): AdminProfile {
   return {
     id: "demo-admin",
@@ -85,6 +94,14 @@ export default function useAuth() {
       return;
     }
 
+    if (shouldBypassAdminProfileChecks()) {
+      // Recovery pages should not query admin_profile or force sign-out.
+      setAccessToken(session.access_token);
+      setAdminProfile(null);
+      setIsLoggedIn(false);
+      return;
+    }
+
     const profile = await getAdminProfile(session.user.id);
     if (
       !profile ||
@@ -143,11 +160,33 @@ export default function useAuth() {
       setAuthLoading(false);
       if (error?.message === "Invalid login credentials") {
         setError("Invalid email or password for this Supabase Auth user");
-        return;
+        return {
+          success: false,
+          error: error.message,
+          errorStatus: (error as any)?.status,
+          errorCode: (error as any)?.code,
+        };
+      }
+
+      if (error?.message === "Database error querying schema") {
+        setError(
+          "Supabase auth schema error. Run the auth.users email_change NULL fix in SQL, then retry.",
+        );
+        return {
+          success: false,
+          error: error.message,
+          errorStatus: (error as any)?.status,
+          errorCode: (error as any)?.code,
+        };
       }
 
       setError(error?.message || "Unable to sign in");
-      return;
+      return {
+        success: false,
+        error: error?.message || "Unable to sign in",
+        errorStatus: (error as any)?.status,
+        errorCode: (error as any)?.code,
+      };
     }
 
     const profile = await getAdminProfile(data.session.user.id);
@@ -158,7 +197,7 @@ export default function useAuth() {
       await supabase.auth.signOut();
       setAuthLoading(false);
       setError("No admin profile found for this account");
-      return;
+      return { success: false, error: "No admin profile found for this account" };
     }
 
     if (profile.is_active === false) {
@@ -168,7 +207,7 @@ export default function useAuth() {
       await supabase.auth.signOut();
       setAuthLoading(false);
       setError("This admin account is inactive");
-      return;
+      return { success: false, error: "This admin account is inactive" };
     }
 
     if (profile.role !== "super_admin") {
@@ -180,7 +219,10 @@ export default function useAuth() {
       await supabase.auth.signOut();
       setAuthLoading(false);
       setError("Access denied: super admin role required");
-      return;
+      return {
+        success: false,
+        error: "Access denied: super admin role required",
+      };
     }
 
     await supabase
@@ -207,10 +249,17 @@ export default function useAuth() {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(DEMO_LOGIN_KEY);
     }
-    await supabase.auth.signOut();
-    setAccessToken(null);
-    setAdminProfile(null);
-    setIsLoggedIn(false);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      if (isDev) {
+        console.error("[auth] signOut failed", error);
+      }
+    } finally {
+      setAccessToken(null);
+      setAdminProfile(null);
+      setIsLoggedIn(false);
+    }
   }
 
   async function refreshAuth(token?: string) {
@@ -237,6 +286,14 @@ export default function useAuth() {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session?.access_token || !session.user?.id) {
         setAccessToken(null);
+        setAdminProfile(null);
+        setIsLoggedIn(false);
+        return;
+      }
+
+      if (shouldBypassAdminProfileChecks()) {
+        // Recovery pages should not query admin_profile or force sign-out.
+        setAccessToken(session.access_token);
         setAdminProfile(null);
         setIsLoggedIn(false);
         return;

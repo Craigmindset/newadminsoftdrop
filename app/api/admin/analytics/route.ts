@@ -5,8 +5,12 @@ export async function GET() {
   const supabaseAdmin = getSupabaseAdmin();
 
   const [senderCountResult, carrierCountResult] = await Promise.all([
-    supabaseAdmin.from("sender_profile").select("id", { count: "exact", head: true }),
-    supabaseAdmin.from("carrier_profile").select("id", { count: "exact", head: true }),
+    supabaseAdmin
+      .from("sender_profile")
+      .select("id", { count: "exact", head: true }),
+    supabaseAdmin
+      .from("carrier_profile")
+      .select("id", { count: "exact", head: true }),
   ]);
 
   if (senderCountResult.error || carrierCountResult.error) {

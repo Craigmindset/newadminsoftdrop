@@ -40,18 +40,18 @@ const calculateMetrics = (transactions: typeof mockTransactions) => {
   const totalAmount = transactions.reduce((sum, trx) => sum + trx.amount, 0);
   const totalCommission = transactions.reduce(
     (sum, trx) => sum + trx.commission,
-    0
+    0,
   );
   const completedTransactions = transactions.filter(
-    (trx) => trx.status === "completed"
+    (trx) => trx.status === "completed",
   );
   const completedAmount = completedTransactions.reduce(
     (sum, trx) => sum + trx.amount,
-    0
+    0,
   );
   const completedCommission = completedTransactions.reduce(
     (sum, trx) => sum + trx.commission,
-    0
+    0,
   );
 
   return {
@@ -139,44 +139,51 @@ export default function TransactionsPage() {
   }, []);
 
   // Filter transactions based on filters
-  const filteredTransactions = useMemo(() =>
-    transactions.filter((transaction) => {
-      const matchesType =
-        transactionType === "all" || transaction.route === transactionType;
-      const matchesStatus =
-        statusFilter === "all" || transaction.status === statusFilter;
-      const senderName = String(transaction?.sender?.name || "").toLowerCase();
-      const carrierName = String(transaction?.carrier?.name || "").toLowerCase();
-      const matchesSearch =
-        String(transaction.id || "")
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        senderName.includes(searchQuery.toLowerCase()) ||
-        carrierName.includes(searchQuery.toLowerCase());
+  const filteredTransactions = useMemo(
+    () =>
+      transactions.filter((transaction) => {
+        const matchesType =
+          transactionType === "all" || transaction.route === transactionType;
+        const matchesStatus =
+          statusFilter === "all" || transaction.status === statusFilter;
+        const senderName = String(
+          transaction?.sender?.name || "",
+        ).toLowerCase();
+        const carrierName = String(
+          transaction?.carrier?.name || "",
+        ).toLowerCase();
+        const matchesSearch =
+          String(transaction.id || "")
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          senderName.includes(searchQuery.toLowerCase()) ||
+          carrierName.includes(searchQuery.toLowerCase());
 
-      let matchesTimeframe = true;
-      const createdAt = transaction.date ? new Date(transaction.date) : null;
-      if (createdAt) {
-        if (timeframe === "today") {
-          matchesTimeframe =
-            createdAt.toDateString() === new Date().toDateString();
-        } else if (timeframe === "week") {
-          const now = new Date();
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          matchesTimeframe = createdAt >= weekAgo;
-        } else if (timeframe === "month") {
-          const now = new Date();
-          const monthAgo = new Date(
-            now.getFullYear(),
-            now.getMonth() - 1,
-            now.getDate(),
-          );
-          matchesTimeframe = createdAt >= monthAgo;
+        let matchesTimeframe = true;
+        const createdAt = transaction.date ? new Date(transaction.date) : null;
+        if (createdAt) {
+          if (timeframe === "today") {
+            matchesTimeframe =
+              createdAt.toDateString() === new Date().toDateString();
+          } else if (timeframe === "week") {
+            const now = new Date();
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            matchesTimeframe = createdAt >= weekAgo;
+          } else if (timeframe === "month") {
+            const now = new Date();
+            const monthAgo = new Date(
+              now.getFullYear(),
+              now.getMonth() - 1,
+              now.getDate(),
+            );
+            matchesTimeframe = createdAt >= monthAgo;
+          }
         }
-      }
 
-      return matchesType && matchesStatus && matchesSearch && matchesTimeframe;
-    }),
+        return (
+          matchesType && matchesStatus && matchesSearch && matchesTimeframe
+        );
+      }),
     [searchQuery, statusFilter, timeframe, transactionType, transactions],
   );
 
@@ -273,15 +280,17 @@ export default function TransactionsPage() {
     ]);
 
     autoTable(doc, {
-      head: [[
-        "Package ID",
-        "Date",
-        "Sender",
-        "Carrier",
-        "Amount",
-        "Commission",
-        "Status",
-      ]],
+      head: [
+        [
+          "Package ID",
+          "Date",
+          "Sender",
+          "Carrier",
+          "Amount",
+          "Commission",
+          "Status",
+        ],
+      ],
       body: rows,
       styles: { fontSize: 9 },
       headStyles: { fillColor: [30, 41, 59] },
@@ -314,9 +323,7 @@ export default function TransactionsPage() {
             <div className="text-2xl font-bold">
               {metrics.totalTransactions}
             </div>
-            <p className="text-xs text-gray-500">
-              Completed deliveries
-            </p>
+            <p className="text-xs text-gray-500">Completed deliveries</p>
           </CardContent>
         </Card>
 
@@ -553,18 +560,16 @@ export default function TransactionsPage() {
                           transaction.status === "completed"
                             ? "bg-green-100 text-green-800"
                             : transaction.status === "in_progress"
-                            ? "bg-blue-100 text-blue-800"
-                            : transaction.status === "pending"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
+                              ? "bg-blue-100 text-blue-800"
+                              : transaction.status === "pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
                         }
                       >
                         {transaction.status
                           ? transaction.status
                               .replace(/_/g, " ")
-                              .replace(/\b\w/g, (c: string) =>
-                                c.toUpperCase(),
-                              )
+                              .replace(/\b\w/g, (c: string) => c.toUpperCase())
                           : "-"}
                       </Badge>
                     </td>
@@ -657,8 +662,10 @@ export default function TransactionsPage() {
                   Intracity Transactions
                 </h3>
                 <div className="text-2xl font-bold">
-                  {filteredTransactions.filter((t) => t.route === "intra")
-                    .length}
+                  {
+                    filteredTransactions.filter((t) => t.route === "intra")
+                      .length
+                  }
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
                   Commission: ₦
@@ -677,8 +684,10 @@ export default function TransactionsPage() {
                   Interstate Transactions
                 </h3>
                 <div className="text-2xl font-bold">
-                  {filteredTransactions.filter((t) => t.route === "inter")
-                    .length}
+                  {
+                    filteredTransactions.filter((t) => t.route === "inter")
+                      .length
+                  }
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
                   Commission: ₦

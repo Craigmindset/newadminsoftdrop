@@ -5,7 +5,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   Bell,
@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   HelpCircle,
   Home,
+  LogOut,
   Menu,
   MessageSquare,
   Radio,
@@ -25,6 +26,8 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthProvider } from "@/contexts/AuthContext";
+import { useTheme } from "next-themes";
 
 interface NavItemProps {
   href: string;
@@ -81,6 +84,18 @@ export default function DashboardLayout({
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [walletLoading, setWalletLoading] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
+  const auth = useAuthProvider();
+  const { setTheme } = useTheme();
+
+  useEffect(() => {
+    if (auth?.authLoading) {
+      return;
+    }
+    if (auth?.isLoggedIn === false) {
+      router.replace("/admin");
+    }
+  }, [auth?.authLoading, auth?.isLoggedIn, router]);
 
   const mainNavItems: SidebarItem[] = [
     {
@@ -213,6 +228,14 @@ export default function DashboardLayout({
       active = false;
     };
   }, []);
+
+  if (auth?.authLoading || auth?.isLoggedIn === false) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">Checking session...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -377,7 +400,9 @@ export default function DashboardLayout({
               <Menu className="h-6 w-6" />
             </button>
             <div className="hidden lg:block">
-              <h2 className="text-lg font-semibold text-foreground">Hi, Admin</h2>
+              <h2 className="text-lg font-semibold text-foreground">
+                Hi, Admin
+              </h2>
             </div>
           </div>
 
@@ -427,6 +452,27 @@ export default function DashboardLayout({
             >
               <Radio className="h-5 w-5 text-foreground" />
             </Link>
+
+            <button
+              onClick={async () => {
+                try {
+                  await auth?.logout();
+                } finally {
+                  try {
+                    sessionStorage.removeItem("admin:wallet:v1");
+                  } catch {
+                    // ignore sessionStorage cleanup failures
+                  }
+                  setTheme("light");
+                  router.replace("/admin");
+                  router.refresh();
+                }
+              }}
+              className="p-2.5 rounded-full hover:bg-muted transition-colors"
+              aria-label="Logout"
+            >
+              <LogOut className="h-5 w-5 text-foreground" />
+            </button>
 
             {/* Profile */}
             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm">

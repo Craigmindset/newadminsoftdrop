@@ -17,7 +17,7 @@ interface AuthInterface {
     body: { email: string; password: string },
     setError: (val: string) => void,
   ) => Promise<{ success: boolean } | any>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthInterface | null>(null);

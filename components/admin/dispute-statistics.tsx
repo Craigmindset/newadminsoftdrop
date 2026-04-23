@@ -1,16 +1,22 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { AlertTriangle, CheckCircle2, Clock, ShieldAlert } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { getDisputeStatistics, type TimeframeOption } from "@/lib/admin-data"
-import type { DisputeStats } from "@/lib/admin-data"
+import { useState, useEffect } from "react";
+import { AlertTriangle, CheckCircle2, Clock, ShieldAlert } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { getDisputeStatistics, type TimeframeOption } from "@/lib/admin-data";
+import type { DisputeStats } from "@/lib/admin-data";
 
 export function DisputeStatistics() {
-  const [timeframe, setTimeframe] = useState<TimeframeOption>("weekly")
+  const [timeframe, setTimeframe] = useState<TimeframeOption>("weekly");
   const [stats, setStats] = useState<DisputeStats>({
     total: 0,
     pending: 0,
@@ -18,37 +24,39 @@ export function DisputeStatistics() {
     resolved: 0,
     byType: {},
     resolutionRate: 0,
-  })
-  const [loading, setLoading] = useState(true)
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
-      setLoading(true)
+      setLoading(true);
       try {
-        const data = await getDisputeStatistics(timeframe)
-        setStats(data)
+        const data = await getDisputeStatistics(timeframe);
+        setStats(data);
       } catch (error) {
-        console.error("Error fetching dispute statistics:", error)
+        console.error("Error fetching dispute statistics:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchData()
-  }, [timeframe])
+    fetchData();
+  }, [timeframe]);
 
   // Get dispute types and ensure we have at least some default types
   const disputeTypes =
     Object.keys(stats.byType).length > 0
       ? Object.keys(stats.byType)
-      : ["delivery-issue", "damaged-item", "wrong-item", "payment-issue"]
+      : ["delivery-issue", "damaged-item", "wrong-item", "payment-issue"];
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
           <CardTitle>Delivery Routes</CardTitle>
-          <CardDescription>Overview of delivery routes and statuses</CardDescription>
+          <CardDescription>
+            Overview of delivery routes and statuses
+          </CardDescription>
         </div>
         <Tabs
           defaultValue={timeframe}
@@ -67,7 +75,10 @@ export function DisputeStatistics() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-4">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-24 bg-gray-100 animate-pulse rounded-lg"></div>
+                <div
+                  key={i}
+                  className="h-24 bg-gray-100 animate-pulse rounded-lg"
+                ></div>
               ))}
             </div>
             <div className="grid gap-6 md:grid-cols-2">
@@ -117,8 +128,11 @@ export function DisputeStatistics() {
                 <h3 className="text-sm font-medium mb-3">Disputes by Type</h3>
                 <div className="space-y-3">
                   {disputeTypes.map((type) => {
-                    const count = stats.byType[type] || 0
-                    const percentage = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0
+                    const count = stats.byType[type] || 0;
+                    const percentage =
+                      stats.total > 0
+                        ? Math.round((count / stats.total) * 100)
+                        : 0;
 
                     return (
                       <div key={type}>
@@ -126,7 +140,10 @@ export function DisputeStatistics() {
                           <span className="text-sm">
                             {type
                               .split("-")
-                              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                              .map(
+                                (word) =>
+                                  word.charAt(0).toUpperCase() + word.slice(1),
+                              )
                               .join(" ")}
                           </span>
                           <span className="text-sm">
@@ -148,7 +165,7 @@ export function DisputeStatistics() {
                           ></div>
                         </div>
                       </div>
-                    )
+                    );
                   })}
                 </div>
               </div>
@@ -157,8 +174,12 @@ export function DisputeStatistics() {
                 <h3 className="text-sm font-medium mb-3">Resolution Rate</h3>
                 <div className="bg-gray-50 rounded-lg p-4 h-[calc(100%-24px)] flex flex-col justify-between">
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-green-600">{stats.resolutionRate}%</div>
-                    <p className="text-sm text-gray-500 mt-1">of disputes resolved</p>
+                    <div className="text-4xl font-bold text-green-600">
+                      {stats.resolutionRate}%
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      of disputes resolved
+                    </p>
                   </div>
 
                   <div className="mt-4">
@@ -182,7 +203,9 @@ export function DisputeStatistics() {
 
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-sm font-medium">Average Resolution Time</p>
+                      <p className="text-sm font-medium">
+                        Average Resolution Time
+                      </p>
                       <p className="text-sm text-gray-500">Calculating...</p>
                     </div>
 
@@ -197,5 +220,5 @@ export function DisputeStatistics() {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -12,14 +12,20 @@ type SendNotificationBody = {
 
 function isValidExpoToken(token: string) {
   return (
-    token.startsWith("ExponentPushToken[") ||
-    token.startsWith("ExpoPushToken[")
+    token.startsWith("ExponentPushToken[") || token.startsWith("ExpoPushToken[")
   );
 }
 
-async function sendExpoMessages(messages: Array<{ to: string; title: string; body: string; data?: Record<string, unknown> }>) {
+async function sendExpoMessages(
+  messages: Array<{
+    to: string;
+    title: string;
+    body: string;
+    data?: Record<string, unknown>;
+  }>,
+) {
   const chunkSize = 100;
-  const chunks: typeof messages[] = [];
+  const chunks: (typeof messages)[] = [];
   for (let i = 0; i < messages.length; i += chunkSize) {
     chunks.push(messages.slice(i, i + chunkSize));
   }
@@ -36,7 +42,10 @@ async function sendExpoMessages(messages: Array<{ to: string; title: string; bod
     });
 
     if (!response.ok) {
-      results.push({ ok: false, error: `Expo push request failed: ${response.status}` });
+      results.push({
+        ok: false,
+        error: `Expo push request failed: ${response.status}`,
+      });
       continue;
     }
 
@@ -166,7 +175,9 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from("admin_notification")
-    .select("id,title,message,target,priority,created_at,sent_count,failed_count")
+    .select(
+      "id,title,message,target,priority,created_at,sent_count,failed_count",
+    )
     .order("created_at", { ascending: false });
 
   if (error) {

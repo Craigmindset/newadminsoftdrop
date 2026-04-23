@@ -17,7 +17,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useToast } from "@/components/ui/use-toast"
+import { useAuthProvider } from "@/contexts/AuthContext"
 
 // Mock data for demonstration
 const mockAdmins = [
@@ -55,49 +63,74 @@ const mockAdmins = [
   },
 ]
 
-const availablePermissions = [
-  { id: "users.view", label: "View Users" },
-  { id: "users.manage", label: "Manage Users" },
-  { id: "transactions.view", label: "View Transactions" },
-  { id: "transactions.manage", label: "Manage Transactions" },
-  { id: "disputes.view", label: "View Disputes" },
-  { id: "disputes.manage", label: "Manage Disputes" },
-  { id: "notifications.manage", label: "Manage Notifications" },
-  { id: "analytics.view", label: "View Analytics" },
-  { id: "roles.manage", label: "Manage Admin Roles" },
-]
-
 export default function AdminRoles() {
+  const { toast } = useToast()
+  const auth = useAuthProvider()
+  const accessToken = auth?.accessToken || ""
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isInviting, setIsInviting] = useState(false)
   const [newAdminData, setNewAdminData] = useState({
-    name: "",
     email: "",
-    role: "",
-    permissions: [] as string[],
+    role: "manager",
   })
 
-  const handlePermissionChange = (permissionId: string) => {
-    setNewAdminData((prev) => {
-      const permissions = prev.permissions.includes(permissionId)
-        ? prev.permissions.filter((id) => id !== permissionId)
-        : [...prev.permissions, permissionId]
+  const handleAddAdmin = async () => {
+    if (!newAdminData.email.trim() || !newAdminData.role) {
+      toast({
+        title: "Missing details",
+        description: "Email and role are required.",
+        variant: "destructive",
+      })
+      return
+    }
 
-      return { ...prev, permissions }
-    })
-  }
+    if (!accessToken) {
+      toast({
+        title: "Unauthorized",
+        description: "Please sign in again.",
+        variant: "destructive",
+      })
+      return
+    }
 
-  const handleAddAdmin = () => {
-    // In a real app, you would send this data to your backend
-    console.log("Adding new admin:", newAdminData)
+    try {
+      setIsInviting(true)
+      const response = await fetch("/api/admin/roles/invite", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          email: newAdminData.email,
+          role: newAdminData.role,
+        }),
+      })
 
-    // Reset form and close dialog
-    setNewAdminData({
-      name: "",
-      email: "",
-      role: "",
-      permissions: [],
-    })
-    setIsAddDialogOpen(false)
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.error || "Unable to invite admin")
+      }
+
+      toast({
+        title: "Invite sent",
+        description: "The admin invite has been emailed.",
+      })
+
+      setNewAdminData({
+        email: "",
+        role: "manager",
+      })
+      setIsAddDialogOpen(false)
+    } catch (error: any) {
+      toast({
+        title: "Invite failed",
+        description: error?.message || "Unable to invite admin",
+        variant: "destructive",
+      })
+    } finally {
+      setIsInviting(false)
+    }
   }
 
   return (
@@ -116,21 +149,10 @@ export default function AdminRoles() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Add New Admin</DialogTitle>
-              <DialogDescription>Create a new admin user with specific role and permissions</DialogDescription>
+              <DialogTitle>Invite Admin</DialogTitle>
+              <DialogDescription>Send an invite email and assign a role</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  value={newAdminData.name}
-                  onChange={(e) => setNewAdminData({ ...newAdminData, name: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="email" className="text-right">
                   Email
@@ -147,32 +169,22 @@ export default function AdminRoles() {
                 <Label htmlFor="role" className="text-right">
                   Role
                 </Label>
-                <Input
-                  id="role"
-                  value={newAdminData.role}
-                  onChange={(e) => setNewAdminData({ ...newAdminData, role: e.target.value })}
-                  className="col-span-3"
-                  placeholder="e.g. Marketing, Finance, Customer Care"
-                />
-              </div>
-              <div className="grid grid-cols-4 gap-4">
-                <Label className="text-right pt-2">Permissions</Label>
-                <div className="col-span-3 space-y-2">
-                  {availablePermissions.map((permission) => (
-                    <div key={permission.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={permission.id}
-                        checked={newAdminData.permissions.includes(permission.id)}
-                        onCheckedChange={() => handlePermissionChange(permission.id)}
-                      />
-                      <label
-                        htmlFor={permission.id}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {permission.label}
-                      </label>
-                    </div>
-                  ))}
+                <div className="col-span-3">
+                  <Select
+                    value={newAdminData.role}
+                    onValueChange={(value) =>
+                      setNewAdminData({ ...newAdminData, role: value })
+                    }
+                  >
+                    <SelectTrigger id="role">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="super_admin">Super Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="support">Support</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -180,7 +192,9 @@ export default function AdminRoles() {
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddAdmin}>Add Admin</Button>
+              <Button onClick={handleAddAdmin} disabled={isInviting}>
+                {isInviting ? "Sending..." : "Send Invite"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

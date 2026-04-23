@@ -1,68 +1,101 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Search, AlertTriangle, Info, CheckCircle2, Users, UserCircle, Truck } from "lucide-react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { useToast } from "@/components/ui/use-toast"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useEffect, useState } from "react";
+import {
+  Search,
+  AlertTriangle,
+  Info,
+  CheckCircle2,
+  Users,
+  UserCircle,
+  Truck,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type NotificationRow = {
-  id: string
-  title: string
-  message: string
-  target: "all" | "senders" | "carriers"
-  priority: "high" | "medium" | "low"
-  created_at: string
-  sent_count: number
-  failed_count: number
-}
+  id: string;
+  title: string;
+  message: string;
+  target: "all" | "senders" | "carriers";
+  priority: "high" | "medium" | "low";
+  created_at: string;
+  sent_count: number;
+  failed_count: number;
+};
 
 export default function NotificationsPage() {
-  const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState("create")
-  const [title, setTitle] = useState("")
-  const [message, setMessage] = useState("")
-  const [target, setTarget] = useState("all")
-  const [priority, setPriority] = useState("medium")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [targetFilter, setTargetFilter] = useState("all")
-  const [priorityFilter, setPriorityFilter] = useState("all")
-  const [isSending, setIsSending] = useState(false)
-  const [notifications, setNotifications] = useState<NotificationRow[]>([])
-  const [historyLoading, setHistoryLoading] = useState(false)
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("create");
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [target, setTarget] = useState<NotificationRow["target"]>("all");
+  const [priority, setPriority] =
+    useState<NotificationRow["priority"]>("medium");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [targetFilter, setTargetFilter] = useState<
+    NotificationRow["target"] | "all"
+  >("all");
+  const [priorityFilter, setPriorityFilter] = useState<
+    NotificationRow["priority"] | "all"
+  >("all");
+  const [isSending, setIsSending] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
-    let active = true
+    let active = true;
 
     async function loadHistory() {
-      setHistoryLoading(true)
-      const response = await fetch("/api/admin/notifications")
+      setHistoryLoading(true);
+      const response = await fetch("/api/admin/notifications");
       if (!response.ok) {
-        setHistoryLoading(false)
-        return
+        setHistoryLoading(false);
+        return;
       }
 
-      const payload = await response.json()
+      const payload = await response.json();
       if (!active) {
-        return
+        return;
       }
 
-      setNotifications(payload.data || [])
-      setHistoryLoading(false)
+      setNotifications(payload.data || []);
+      setHistoryLoading(false);
     }
 
-    loadHistory()
+    loadHistory();
 
     return () => {
-      active = false
-    }
-  }, [])
+      active = false;
+    };
+  }, []);
 
   // Filter notifications based on search query and filters
   const filteredNotifications = notifications
@@ -71,9 +104,18 @@ export default function NotificationsPage() {
         notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         notification.message.toLowerCase().includes(searchQuery.toLowerCase()),
     )
-    .filter((notification) => (targetFilter === "all" ? true : notification.target === targetFilter))
-    .filter((notification) => (priorityFilter === "all" ? true : notification.priority === priorityFilter))
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .filter((notification) =>
+      targetFilter === "all" ? true : notification.target === targetFilter,
+    )
+    .filter((notification) =>
+      priorityFilter === "all"
+        ? true
+        : notification.priority === priorityFilter,
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
 
   const handleSendNotification = async () => {
     if (!title.trim() || !message.trim()) {
@@ -81,120 +123,120 @@ export default function NotificationsPage() {
         title: "Error",
         description: "Please fill in all required fields",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     try {
-      setIsSending(true)
+      setIsSending(true);
       const response = await fetch("/api/admin/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, message, target, priority }),
-      })
+      });
 
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({}))
-        throw new Error(payload?.error || "Unable to send notification")
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || "Unable to send notification");
       }
 
-      const payload = await response.json().catch(() => ({}))
+      const payload = await response.json().catch(() => ({}));
       toast({
         title: "Notification Sent",
         description: `Sent ${payload?.sent ?? 0} notification(s).`,
-      })
+      });
     } catch (error: any) {
       toast({
         title: "Error",
         description: error?.message || "Unable to send notification",
         variant: "destructive",
-      })
-      setIsSending(false)
-      return
+      });
+      setIsSending(false);
+      return;
     }
 
     // Reset form
-    setTitle("")
-    setMessage("")
-    setTarget("all")
-    setPriority("medium")
+    setTitle("");
+    setMessage("");
+    setTarget("all");
+    setPriority("medium");
 
     try {
-      const historyResponse = await fetch("/api/admin/notifications")
+      const historyResponse = await fetch("/api/admin/notifications");
       if (historyResponse.ok) {
-        const historyPayload = await historyResponse.json()
-        setNotifications(historyPayload.data || [])
+        const historyPayload = await historyResponse.json();
+        setNotifications(historyPayload.data || []);
       }
     } catch (error) {
-      console.error("Failed to refresh notification history", error)
+      console.error("Failed to refresh notification history", error);
     }
 
     // Switch to history tab
-    setActiveTab("history")
-    setIsSending(false)
-  }
+    setActiveTab("history");
+    setIsSending(false);
+  };
 
   const handleReuseNotification = (notification: NotificationRow) => {
-    setTitle(notification.title)
-    setMessage(notification.message)
-    setTarget(notification.target)
-    setPriority(notification.priority)
-    setActiveTab("create")
-  }
+    setTitle(notification.title);
+    setMessage(notification.message);
+    setTarget(notification.target);
+    setPriority(notification.priority);
+    setActiveTab("create");
+  };
 
-  const getPriorityBadge = (priority) => {
+  const getPriorityBadge = (priority: NotificationRow["priority"]) => {
     switch (priority) {
       case "high":
         return (
           <Badge variant="destructive" className="flex items-center gap-1">
             <AlertTriangle className="h-3 w-3" /> High
           </Badge>
-        )
+        );
       case "medium":
         return (
           <Badge variant="default" className="flex items-center gap-1">
             <Info className="h-3 w-3" /> Medium
           </Badge>
-        )
+        );
       case "low":
         return (
           <Badge variant="outline" className="flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3" /> Low
           </Badge>
-        )
+        );
       default:
-        return null
+        return null;
     }
-  }
+  };
 
-  const getTargetIcon = (target) => {
+  const getTargetIcon = (target: NotificationRow["target"]) => {
     switch (target) {
       case "all":
-        return <Users className="h-4 w-4" />
+        return <Users className="h-4 w-4" />;
       case "senders":
-        return <UserCircle className="h-4 w-4" />
+        return <UserCircle className="h-4 w-4" />;
       case "carriers":
-        return <Truck className="h-4 w-4" />
+        return <Truck className="h-4 w-4" />;
       default:
-        return null
+        return null;
     }
-  }
+  };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    }).format(date)
-  }
+    }).format(date);
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Notification Management</h1>
+        <h1 className="text-2xl font-bold">Notification Management</h1>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -207,7 +249,7 @@ export default function NotificationsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Create New Notification</CardTitle>
-              <CardDescription>Send notifications to users with Expo push tokens</CardDescription>
+              <CardDescription>Send notifications to users</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -240,12 +282,19 @@ export default function NotificationsPage() {
                   <label htmlFor="target" className="text-sm font-medium">
                     Target Audience
                   </label>
-                  <Select value={target} onValueChange={setTarget}>
+                  <Select
+                    value={target}
+                    onValueChange={(value) =>
+                      setTarget(value as NotificationRow["target"])
+                    }
+                  >
                     <SelectTrigger id="target">
                       <SelectValue placeholder="Select target audience" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Users (Senders + Carriers)</SelectItem>
+                      <SelectItem value="all">
+                        All Users (Senders + Carriers)
+                      </SelectItem>
                       <SelectItem value="senders">Senders Only</SelectItem>
                       <SelectItem value="carriers">Carriers Only</SelectItem>
                     </SelectContent>
@@ -256,7 +305,12 @@ export default function NotificationsPage() {
                   <label htmlFor="priority" className="text-sm font-medium">
                     Priority Level
                   </label>
-                  <Select value={priority} onValueChange={setPriority}>
+                  <Select
+                    value={priority}
+                    onValueChange={(value) =>
+                      setPriority(value as NotificationRow["priority"])
+                    }
+                  >
                     <SelectTrigger id="priority">
                       <SelectValue placeholder="Select priority level" />
                     </SelectTrigger>
@@ -270,7 +324,11 @@ export default function NotificationsPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={handleSendNotification} className="w-full" disabled={isSending}>
+              <Button
+                onClick={handleSendNotification}
+                className="w-full"
+                disabled={isSending}
+              >
                 {isSending ? "Sending..." : "Send Notification"}
               </Button>
             </CardFooter>
@@ -281,7 +339,9 @@ export default function NotificationsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Notification History</CardTitle>
-              <CardDescription>View and manage all sent notifications</CardDescription>
+              <CardDescription>
+                View and manage all sent notifications
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col md:flex-row gap-4">
@@ -296,7 +356,14 @@ export default function NotificationsPage() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Select value={targetFilter} onValueChange={setTargetFilter}>
+                  <Select
+                    value={targetFilter}
+                    onValueChange={(value) =>
+                      setTargetFilter(
+                        value as NotificationRow["target"] | "all",
+                      )
+                    }
+                  >
                     <SelectTrigger className="w-[130px]">
                       <SelectValue placeholder="Target" />
                     </SelectTrigger>
@@ -307,7 +374,14 @@ export default function NotificationsPage() {
                     </SelectContent>
                   </Select>
 
-                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                  <Select
+                    value={priorityFilter}
+                    onValueChange={(value) =>
+                      setPriorityFilter(
+                        value as NotificationRow["priority"] | "all",
+                      )
+                    }
+                  >
                     <SelectTrigger className="w-[130px]">
                       <SelectValue placeholder="Priority" />
                     </SelectTrigger>
@@ -326,9 +400,13 @@ export default function NotificationsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Title</TableHead>
-                      <TableHead className="hidden md:table-cell">Target</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Target
+                      </TableHead>
                       <TableHead>Priority</TableHead>
-                      <TableHead className="hidden md:table-cell">Date</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Date
+                      </TableHead>
                       <TableHead>Sent</TableHead>
                       <TableHead>Failed</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -352,7 +430,9 @@ export default function NotificationsPage() {
                         <TableRow key={notification.id}>
                           <TableCell>
                             <div>
-                              <div className="font-medium">{notification.title}</div>
+                              <div className="font-medium">
+                                {notification.title}
+                              </div>
                               <div className="text-sm text-muted-foreground hidden md:block">
                                 {notification.message.length > 60
                                   ? `${notification.message.substring(0, 60)}...`
@@ -363,18 +443,26 @@ export default function NotificationsPage() {
                           <TableCell className="hidden md:table-cell">
                             <div className="flex items-center gap-1">
                               {getTargetIcon(notification.target)}
-                              <span className="capitalize">{notification.target}</span>
+                              <span className="capitalize">
+                                {notification.target}
+                              </span>
                             </div>
                           </TableCell>
-                          <TableCell>{getPriorityBadge(notification.priority)}</TableCell>
-                          <TableCell className="hidden md:table-cell">{formatDate(notification.created_at)}</TableCell>
+                          <TableCell>
+                            {getPriorityBadge(notification.priority)}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {formatDate(notification.created_at)}
+                          </TableCell>
                           <TableCell>{notification.sent_count}</TableCell>
                           <TableCell>{notification.failed_count}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleReuseNotification(notification)}
+                              onClick={() =>
+                                handleReuseNotification(notification)
+                              }
                             >
                               Reuse
                             </Button>
@@ -390,5 +478,5 @@ export default function NotificationsPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
