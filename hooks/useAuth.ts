@@ -103,11 +103,7 @@ export default function useAuth() {
     }
 
     const profile = await getAdminProfile(session.user.id);
-    if (
-      !profile ||
-      profile.is_active === false ||
-      profile.role !== "super_admin"
-    ) {
+    if (!profile || profile.is_active === false) {
       await supabase.auth.signOut();
       setAccessToken(null);
       setAdminProfile(null);
@@ -210,21 +206,6 @@ export default function useAuth() {
       return { success: false, error: "This admin account is inactive" };
     }
 
-    if (profile.role !== "super_admin") {
-      if (isDev) {
-        console.warn("[auth] login blocked: role is not super_admin", {
-          role: profile.role,
-        });
-      }
-      await supabase.auth.signOut();
-      setAuthLoading(false);
-      setError("Access denied: super admin role required");
-      return {
-        success: false,
-        error: "Access denied: super admin role required",
-      };
-    }
-
     await supabase
       .from("admin_profile")
       .update({ last_login: new Date().toISOString() })
@@ -300,11 +281,7 @@ export default function useAuth() {
       }
 
       const profile = await getAdminProfile(session.user.id);
-      if (
-        !profile ||
-        profile.is_active === false ||
-        profile.role !== "super_admin"
-      ) {
+      if (!profile || profile.is_active === false) {
         await supabase.auth.signOut();
         setAccessToken(null);
         setAdminProfile(null);
