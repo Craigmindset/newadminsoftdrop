@@ -89,7 +89,12 @@ export type SenderProfile = {
   address?: string;
 };
 
-export type AdminRole = "super_admin" | "manager" | "support";
+export type AdminRole =
+  | "super_admin"
+  | "manager"
+  | "support"
+  | "finance"
+  | "marketing";
 
 export type AdminProfile = {
   id: string;

@@ -20,8 +20,10 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DisputeStatistics } from "@/components/admin/dispute-statistics";
+import { useAuthProvider } from "@/contexts/AuthContext";
 
 export default function AdminDashboard() {
+  const auth = useAuthProvider();
   const [totalSenders, setTotalSenders] = useState<number>(0);
   const [totalCarriers, setTotalCarriers] = useState<number>(0);
   const [totalDeliveries, setTotalDeliveries] = useState<number>(0);
@@ -89,6 +91,14 @@ export default function AdminDashboard() {
       active = false;
     };
   }, []);
+
+  const canViewRevenue = auth?.can ? auth.can("dashboard:revenue:view") : false;
+  const canViewWalletCard = auth?.can
+    ? auth.can("dashboard:wallet-card:view")
+    : false;
+  const canViewWallet = auth?.can ? auth.can("wallet:view") : false;
+  const canTransferFunds = auth?.can ? auth.can("wallet:transfer:view") : false;
+  const canViewPayouts = auth?.can ? auth.can("wallet:payouts:view") : false;
 
   useEffect(() => {
     let active = true;
@@ -252,65 +262,75 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500 bg-purple-50/50 cursor-pointer hover:bg-purple-100/50 transition-colors dark:bg-purple-500/10 dark:hover:bg-purple-500/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">
-              Revenue
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-              ₦{stats.revenue.toLocaleString()}
+        {canViewRevenue ? (
+          <Card className="border-l-4 border-l-purple-500 bg-purple-50/50 cursor-pointer hover:bg-purple-100/50 transition-colors dark:bg-purple-500/10 dark:hover:bg-purple-500/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">
+                Revenue
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                ₦{stats.revenue.toLocaleString()}
+              </div>
+              <div className="flex items-center pt-1">
+                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                <p className="text-xs text-green-500">
+                  Total delivery transaction
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+      </div>
+
+      {canViewWalletCard ? (
+        <Card className="border border-amber-200/70 bg-gradient-to-br from-amber-50 via-background to-emerald-50 dark:from-amber-500/10 dark:via-background dark:to-emerald-500/10">
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-base font-semibold text-foreground">
+                Admin Wallet
+              </CardTitle>
             </div>
-            <div className="flex items-center pt-1">
-              <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-              <p className="text-xs text-green-500">
-                Total delivery transaction
+            {canViewWallet ? (
+              <Link
+                href="/admin/dashboard/wallet"
+                className="inline-flex items-center rounded-full border border-amber-200/70 bg-background px-4 py-2 text-xs font-semibold text-foreground shadow-sm transition hover:border-amber-300/80"
+              >
+                View wallet
+              </Link>
+            ) : null}
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-2">
+              <p className="text-3xl font-bold text-foreground">
+                {walletBalance === null
+                  ? "₦—"
+                  : `₦${Number(walletBalance).toLocaleString()}`}
               </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {canTransferFunds ? (
+                <Link
+                  href="/admin/dashboard/wallet"
+                  className="inline-flex items-center justify-center rounded-xl bg-foreground px-4 py-2 text-sm font-semibold text-background shadow-sm transition hover:bg-foreground/90"
+                >
+                  Transfer funds
+                </Link>
+              ) : null}
+              {canViewPayouts ? (
+                <Link
+                  href="/admin/dashboard/transactions"
+                  className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:border-foreground/20"
+                >
+                  View payouts
+                </Link>
+              ) : null}
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      <Card className="border border-amber-200/70 bg-gradient-to-br from-amber-50 via-background to-emerald-50 dark:from-amber-500/10 dark:via-background dark:to-emerald-500/10">
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div>
-            <CardTitle className="text-base font-semibold text-foreground">
-              Admin Wallet
-            </CardTitle>
-          </div>
-          <Link
-            href="/admin/dashboard/wallet"
-            className="inline-flex items-center rounded-full border border-amber-200/70 bg-background px-4 py-2 text-xs font-semibold text-foreground shadow-sm transition hover:border-amber-300/80"
-          >
-            View wallet
-          </Link>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-2">
-            <p className="text-3xl font-bold text-foreground">
-              {walletBalance === null
-                ? "₦—"
-                : `₦${Number(walletBalance).toLocaleString()}`}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin/dashboard/wallet"
-              className="inline-flex items-center justify-center rounded-xl bg-foreground px-4 py-2 text-sm font-semibold text-background shadow-sm transition hover:bg-foreground/90"
-            >
-              Transfer funds
-            </Link>
-            <Link
-              href="/admin/dashboard/transactions"
-              className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:border-foreground/20"
-            >
-              View payouts
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      ) : null}
 
       {/* Dispute Statistics */}
       <Suspense
@@ -323,23 +343,25 @@ export default function AdminDashboard() {
 
       {/* Financial Analytics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Revenue Overview</CardTitle>
-            <CardDescription>
-              Financial performance for the current period
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <div className="h-[300px] flex items-center justify-center bg-gray-100 rounded-md">
-              <p className="text-gray-500">
-                Revenue chart will be implemented soon
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {canViewRevenue ? (
+          <Card className="lg:col-span-4">
+            <CardHeader>
+              <CardTitle>Revenue Overview</CardTitle>
+              <CardDescription>
+                Financial performance for the current period
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pl-2">
+              <div className="h-[300px] flex items-center justify-center bg-gray-100 rounded-md">
+                <p className="text-gray-500">
+                  Revenue chart will be implemented soon
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
-        <Card className="lg:col-span-3">
+        <Card className={canViewRevenue ? "lg:col-span-3" : "lg:col-span-7"}>
           <CardHeader>
             <CardTitle>Transaction Summary</CardTitle>
             <CardDescription>Breakdown of transaction types</CardDescription>

@@ -12,6 +12,7 @@ import {
   CreditCard,
   Eye,
   EyeOff,
+  Loader2,
   ChevronLeft,
   HelpCircle,
   Home,
@@ -73,6 +74,21 @@ function NavItem({ href, icon, title, isActive, collapsed }: NavItemProps) {
   );
 }
 
+function formatRoleLabel(role: string | null | undefined) {
+  if (!role) {
+    return "Admin";
+  }
+
+  if (role === "support") {
+    return "Support Agent";
+  }
+
+  return role
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -83,10 +99,13 @@ export default function DashboardLayout({
   const [walletVisible, setWalletVisible] = useState(true);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [walletLoading, setWalletLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isLogoutPressed, setIsLogoutPressed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const auth = useAuthProvider();
   const { setTheme } = useTheme();
+  const roleLabel = formatRoleLabel(auth?.role);
 
   useEffect(() => {
     if (auth?.authLoading) {
@@ -161,8 +180,11 @@ export default function DashboardLayout({
     permission: "settings:view",
   };
 
-  const visibleMainNavItems = mainNavItems;
-  const canSeeSettings = true;
+  const visibleMainNavItems = mainNavItems.filter((item) =>
+    auth?.can ? auth.can(item.permission) : false,
+  );
+  const canSeeSettings = auth?.can ? auth.can("settings:view") : false;
+  const canViewHeaderWallet = auth?.can ? auth.can("wallet:view") : false;
 
   const formattedWalletBalance =
     walletBalance === null || Number.isNaN(walletBalance)
@@ -259,7 +281,7 @@ export default function DashboardLayout({
                 height={32}
                 className="rounded-full"
               />
-              <span>Super Admin</span>
+              <span>{roleLabel}</span>
             </Link>
           )}
           {sidebarCollapsed && (
@@ -346,7 +368,7 @@ export default function DashboardLayout({
                 height={32}
                 className="rounded-full"
               />
-              <span>Super Admin</span>
+              <span>{roleLabel}</span>
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -401,48 +423,50 @@ export default function DashboardLayout({
             </button>
             <div className="hidden lg:block">
               <h2 className="text-lg font-semibold text-foreground">
-                Hi, Admin
+                Hi, {roleLabel}
               </h2>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             {/* Wallet Balance */}
-            <Link
-              href="/admin/dashboard/wallet"
-              className="hidden sm:flex items-center gap-3 px-4 py-2 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
-                <Wallet className="h-4 w-4 text-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Wallet
-                </span>
-                <span className="text-sm font-bold text-foreground">
-                  {walletVisible
-                    ? walletLoading
-                      ? "Loading..."
-                      : formattedWalletBalance
-                    : "••••••••"}
-                </span>
-              </div>
-              <button
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  setWalletVisible(!walletVisible);
-                }}
-                className="p-1 rounded-md hover:bg-muted transition-colors"
-                title={walletVisible ? "Hide balance" : "Show balance"}
+            {canViewHeaderWallet ? (
+              <Link
+                href="/admin/dashboard/wallet"
+                className="hidden sm:flex items-center gap-3 px-4 py-2 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow"
               >
-                {walletVisible ? (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                )}
-              </button>
-            </Link>
+                <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+                  <Wallet className="h-4 w-4 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Wallet
+                  </span>
+                  <span className="text-sm font-bold text-foreground">
+                    {walletVisible
+                      ? walletLoading
+                        ? "Loading..."
+                        : formattedWalletBalance
+                      : "••••••••"}
+                  </span>
+                </div>
+                <button
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setWalletVisible(!walletVisible);
+                  }}
+                  className="p-1 rounded-md hover:bg-muted transition-colors"
+                  title={walletVisible ? "Hide balance" : "Show balance"}
+                >
+                  {walletVisible ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+              </Link>
+            ) : null}
 
             {/* Broadcast Button */}
             <Link
@@ -455,6 +479,11 @@ export default function DashboardLayout({
 
             <button
               onClick={async () => {
+                if (isLoggingOut) {
+                  return;
+                }
+
+                setIsLoggingOut(true);
                 try {
                   await auth?.logout();
                 } finally {
@@ -466,12 +495,28 @@ export default function DashboardLayout({
                   setTheme("light");
                   router.replace("/admin");
                   router.refresh();
+                  setIsLoggingOut(false);
                 }
               }}
-              className="p-2.5 rounded-full hover:bg-muted transition-colors"
+              onMouseDown={() => setIsLogoutPressed(true)}
+              onMouseUp={() => setIsLogoutPressed(false)}
+              onMouseLeave={() => setIsLogoutPressed(false)}
+              onTouchStart={() => setIsLogoutPressed(true)}
+              onTouchEnd={() => setIsLogoutPressed(false)}
+              disabled={isLoggingOut}
+              className="p-2.5 rounded-full transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-80 hover:bg-muted"
               aria-label="Logout"
             >
-              <LogOut className="h-5 w-5 text-foreground" />
+              {isLoggingOut ? (
+                <Loader2 className="h-5 w-5 animate-spin text-red-500" />
+              ) : (
+                <LogOut
+                  className={cn(
+                    "h-5 w-5 transition-colors",
+                    isLogoutPressed ? "text-red-500" : "text-foreground",
+                  )}
+                />
+              )}
             </button>
 
             {/* Profile */}

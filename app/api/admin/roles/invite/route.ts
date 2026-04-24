@@ -40,7 +40,12 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!nextRole || !["super_admin", "manager", "support"].includes(nextRole)) {
+  if (
+    !nextRole ||
+    !["super_admin", "manager", "support", "finance", "marketing"].includes(
+      nextRole,
+    )
+  ) {
     return NextResponse.json(
       { error: "Valid role is required" },
       { status: 400 },

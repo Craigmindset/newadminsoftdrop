@@ -14,13 +14,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useAuthProvider } from "@/contexts/AuthContext";
 
 export default function SettingsPage() {
+  const auth = useAuthProvider();
   const { theme, setTheme } = useTheme();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [transactionPin, setTransactionPin] = useState("");
+  const canViewTransactionPin = auth?.can
+    ? auth.can("settings:transaction-pin:view")
+    : false;
 
   return (
     <div className="space-y-6">
@@ -82,33 +87,35 @@ export default function SettingsPage() {
         </Card>
 
         <div className="space-y-6">
-          <Card className="border border-border">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold text-foreground">
-                Transaction pin
-              </CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Set a 4-digit pin to approve payouts and transfers.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="transaction-pin">New pin</Label>
-                <Input
-                  id="transaction-pin"
-                  type="password"
-                  value={transactionPin}
-                  onChange={(event) => setTransactionPin(event.target.value)}
-                  placeholder="****"
-                  maxLength={4}
-                />
-              </div>
-              <Button className="w-full bg-foreground text-background hover:bg-foreground/90">
-                <ShieldCheck className="h-4 w-4" />
-                Save pin
-              </Button>
-            </CardContent>
-          </Card>
+          {canViewTransactionPin ? (
+            <Card className="border border-border">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold text-foreground">
+                  Transaction pin
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Set a 4-digit pin to approve payouts and transfers.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="transaction-pin">New pin</Label>
+                  <Input
+                    id="transaction-pin"
+                    type="password"
+                    value={transactionPin}
+                    onChange={(event) => setTransactionPin(event.target.value)}
+                    placeholder="****"
+                    maxLength={4}
+                  />
+                </div>
+                <Button className="w-full bg-foreground text-background hover:bg-foreground/90">
+                  <ShieldCheck className="h-4 w-4" />
+                  Save pin
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card className="border border-border">
             <CardHeader>
