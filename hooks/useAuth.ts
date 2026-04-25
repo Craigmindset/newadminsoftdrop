@@ -155,7 +155,7 @@ export default function useAuth() {
     if (error || !data.session?.user?.id) {
       setAuthLoading(false);
       if (error?.message === "Invalid login credentials") {
-        setError("Invalid email or password for this Supabase Auth user");
+        setError("invalid email or password credential");
         return {
           success: false,
           error: error.message,

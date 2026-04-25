@@ -28,6 +28,7 @@ export default function SettingsPage() {
   const auth = useAuthProvider();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const [isThemeReady, setIsThemeReady] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -57,6 +58,10 @@ export default function SettingsPage() {
   const canViewTransactionPin = auth?.can
     ? auth.can("settings:transaction-pin:view")
     : false;
+
+  useEffect(() => {
+    setIsThemeReady(true);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -749,7 +754,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <RadioGroup
-                value={theme || "system"}
+                value={isThemeReady ? theme || "system" : "system"}
                 onValueChange={setTheme}
                 className="grid gap-3 md:grid-cols-3"
               >
