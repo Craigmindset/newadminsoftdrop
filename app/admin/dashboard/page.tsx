@@ -27,6 +27,8 @@ export default function AdminDashboard() {
   const [totalSenders, setTotalSenders] = useState<number>(0);
   const [totalCarriers, setTotalCarriers] = useState<number>(0);
   const [totalDeliveries, setTotalDeliveries] = useState<number>(0);
+  const [cancelledDeliveries, setCancelledDeliveries] = useState<number>(0);
+  const [completedDeliveries, setCompletedDeliveries] = useState<number>(0);
   const [completedRevenue, setCompletedRevenue] = useState<number>(0);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
@@ -36,10 +38,19 @@ export default function AdminDashboard() {
       totalSenders,
       totalCarriers,
       totalDeliveries,
+      cancelledDeliveries,
+      completedDeliveries,
       revenue: completedRevenue,
       weeklyGrowth: 8.5,
     }),
-    [totalSenders, totalCarriers, totalDeliveries, completedRevenue],
+    [
+      totalSenders,
+      totalCarriers,
+      totalDeliveries,
+      cancelledDeliveries,
+      completedDeliveries,
+      completedRevenue,
+    ],
   );
 
   useEffect(() => {
@@ -55,6 +66,8 @@ export default function AdminDashboard() {
             setTotalSenders(Number(cached.totalSenders || 0));
             setTotalCarriers(Number(cached.totalCarriers || 0));
             setTotalDeliveries(Number(cached.totalDeliveries || 0));
+            setCancelledDeliveries(Number(cached.cancelledDeliveries || 0));
+            setCompletedDeliveries(Number(cached.completedDeliveries || 0));
             setCompletedRevenue(Number(cached.revenue || 0));
           }
         }
@@ -76,6 +89,8 @@ export default function AdminDashboard() {
       setTotalSenders(Number(data.totalSenders || 0));
       setTotalCarriers(Number(data.totalCarriers || 0));
       setTotalDeliveries(Number(data.totalDeliveries || 0));
+      setCancelledDeliveries(Number(data.cancelledDeliveries || 0));
+      setCompletedDeliveries(Number(data.completedDeliveries || 0));
       setCompletedRevenue(Number(data.revenue || 0));
 
       try {
@@ -257,7 +272,7 @@ export default function AdminDashboard() {
               {stats.totalDeliveries.toLocaleString()}
             </div>
             <p className="text-xs text-red-600 dark:text-red-200">
-              All recorded transactions
+              Total requests from delivery_request
             </p>
           </CardContent>
         </Card>
@@ -363,23 +378,23 @@ export default function AdminDashboard() {
 
         <Card className={canViewRevenue ? "lg:col-span-3" : "lg:col-span-7"}>
           <CardHeader>
-            <CardTitle>Transaction Summary</CardTitle>
-            <CardDescription>Breakdown of transaction types</CardDescription>
+            <CardTitle>Delivery Routes</CardTitle>
+            <CardDescription>Delivery totals by request status</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center">
                 <div className="w-full">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">
-                      Interstate Deliveries
+                    <span className="text-sm font-medium">Total Delivery</span>
+                    <span className="text-sm text-gray-500">
+                      {stats.totalDeliveries.toLocaleString()}
                     </span>
-                    <span className="text-sm text-gray-500">64%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className="bg-blue-500 h-2 rounded-full"
-                      style={{ width: "64%" }}
+                      style={{ width: "100%" }}
                     ></div>
                   </div>
                 </div>
@@ -389,31 +404,51 @@ export default function AdminDashboard() {
                 <div className="w-full">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium">
-                      Local Deliveries
+                      Cancelled Delivery
                     </span>
-                    <span className="text-sm text-gray-500">28%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ width: "28%" }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <div className="w-full">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">
-                      Express Deliveries
+                    <span className="text-sm text-gray-500">
+                      {stats.cancelledDeliveries.toLocaleString()}
                     </span>
-                    <span className="text-sm text-gray-500">8%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className="bg-orange-500 h-2 rounded-full"
-                      style={{ width: "8%" }}
+                      style={{
+                        width: `${
+                          stats.totalDeliveries > 0
+                            ? (stats.cancelledDeliveries /
+                                stats.totalDeliveries) *
+                              100
+                            : 0
+                        }%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <div className="w-full">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium">
+                      Completed Delivery
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {stats.completedDeliveries.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-emerald-500 h-2 rounded-full"
+                      style={{
+                        width: `${
+                          stats.totalDeliveries > 0
+                            ? (stats.completedDeliveries /
+                                stats.totalDeliveries) *
+                              100
+                            : 0
+                        }%`,
+                      }}
                     ></div>
                   </div>
                 </div>
@@ -422,7 +457,7 @@ export default function AdminDashboard() {
               <div className="pt-4 mt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">Total Delivery</p>
+                    <p className="text-sm font-medium">Total requests</p>
                     <p className="text-2xl font-bold">
                       {stats.totalDeliveries.toLocaleString()}
                     </p>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AlertTriangle, CheckCircle2, Clock, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Clock, ShieldAlert } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -12,8 +12,19 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { getDisputeStatistics, type TimeframeOption } from "@/lib/admin-data";
-import type { DisputeStats } from "@/lib/admin-data";
+
+type TimeframeOption = "daily" | "weekly" | "monthly";
+
+type DisputeStats = {
+  total: number;
+  pending: number;
+  inReview: number;
+  resolved: number;
+  byType: {
+    [key: string]: number;
+  };
+  resolutionRate: number;
+};
 
 export function DisputeStatistics() {
   const [timeframe, setTimeframe] = useState<TimeframeOption>("weekly");
@@ -31,8 +42,33 @@ export function DisputeStatistics() {
     async function fetchData() {
       setLoading(true);
       try {
-        const data = await getDisputeStatistics(timeframe);
-        setStats(data);
+        const response = await fetch("/api/admin/dashboard-metrics", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to load delivery statistics");
+        }
+
+        const data = await response.json();
+        const total = Number(data.totalDeliveries || 0);
+        const cancelled = Number(data.cancelledDeliveries || 0);
+        const completed = Number(data.completedDeliveries || 0);
+        const others = Math.max(total - cancelled - completed, 0);
+
+        setStats({
+          total,
+          pending: cancelled,
+          inReview: completed,
+          resolved: others,
+          byType: {
+            cancelled,
+            completed,
+            ...(others > 0 ? { others } : {}),
+          },
+          resolutionRate:
+            total > 0 ? Math.round((completed / total) * 100) : 0,
+        });
       } catch (error) {
         console.error("Error fetching dispute statistics:", error);
       } finally {
@@ -125,7 +161,7 @@ export function DisputeStatistics() {
 
             <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <h3 className="text-sm font-medium mb-3">Disputes by Type</h3>
+                <h3 className="text-sm font-medium mb-3">Delivery by Status</h3>
                 <div className="space-y-3">
                   {disputeTypes.map((type) => {
                     const count = stats.byType[type] || 0;
@@ -153,13 +189,11 @@ export function DisputeStatistics() {
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
-                              type === "delivery-issue"
-                                ? "bg-blue-500"
-                                : type === "damaged-item"
-                                  ? "bg-red-500"
-                                  : type === "wrong-item"
-                                    ? "bg-yellow-500"
-                                    : "bg-green-500"
+                              type === "completed"
+                                ? "bg-emerald-500"
+                                : type === "cancelled"
+                                  ? "bg-orange-500"
+                                  : "bg-blue-500"
                             }`}
                             style={{ width: `${percentage}%` }}
                           ></div>
@@ -178,7 +212,7 @@ export function DisputeStatistics() {
                       {stats.resolutionRate}%
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      of disputes resolved
+                      of deliveries completed
                     </p>
                   </div>
 

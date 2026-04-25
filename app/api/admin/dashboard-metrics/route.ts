@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-client";
 export async function GET(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
 
-  const [senders, carriers, deliveries] = await Promise.all([
+  const [senders, carriers, deliveries, cancelledDeliveries, completedDeliveries] = await Promise.all([
     supabaseAdmin
       .from("sender_profile")
       .select("id", { count: "exact", head: true }),
@@ -14,6 +14,14 @@ export async function GET(request: Request) {
     supabaseAdmin
       .from("delivery_request")
       .select("id", { count: "exact", head: true }),
+    supabaseAdmin
+      .from("delivery_request")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "cancelled"),
+    supabaseAdmin
+      .from("delivery_request")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "completed"),
   ]);
 
   const { data: completed, error: completedError } = await supabaseAdmin
@@ -21,7 +29,13 @@ export async function GET(request: Request) {
     .select("amount")
     .eq("status", "completed");
 
-  if (senders.error || carriers.error || deliveries.error) {
+  if (
+    senders.error ||
+    carriers.error ||
+    deliveries.error ||
+    cancelledDeliveries.error ||
+    completedDeliveries.error
+  ) {
     return NextResponse.json(
       { error: "Unable to load dashboard metrics" },
       { status: 500 },
@@ -41,6 +55,8 @@ export async function GET(request: Request) {
     totalSenders: senders.count || 0,
     totalCarriers: carriers.count || 0,
     totalDeliveries: deliveries.count || 0,
+    cancelledDeliveries: cancelledDeliveries.count || 0,
+    completedDeliveries: completedDeliveries.count || 0,
     revenue: revenueTotal,
   });
 }
