@@ -26,13 +26,21 @@ export async function POST(request: Request) {
     );
   }
 
-  const { currentPassword, newPassword } = await request
+  const { currentPassword, newPassword, firstName, lastName } = await request
     .json()
-    .catch(() => ({ currentPassword: "", newPassword: "" }));
+    .catch(() => ({
+      currentPassword: "",
+      newPassword: "",
+      firstName: "",
+      lastName: "",
+    }));
 
   const current =
     typeof currentPassword === "string" ? currentPassword : "";
   const next = typeof newPassword === "string" ? newPassword : "";
+  const sanitizedFirstName =
+    typeof firstName === "string" ? firstName.trim() : "";
+  const sanitizedLastName = typeof lastName === "string" ? lastName.trim() : "";
 
   if (!current || !next) {
     return NextResponse.json(
@@ -44,6 +52,13 @@ export async function POST(request: Request) {
   if (next.length < 8) {
     return NextResponse.json(
       { error: "New password must be at least 8 characters" },
+      { status: 400 },
+    );
+  }
+
+  if (!sanitizedFirstName || !sanitizedLastName) {
+    return NextResponse.json(
+      { error: "First name and last name are required" },
       { status: 400 },
     );
   }
@@ -99,6 +114,21 @@ export async function POST(request: Request) {
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  const { error: profileUpdateError } = await supabaseAdmin
+    .from("admin_profile")
+    .update({
+      first_name: sanitizedFirstName,
+      last_name: sanitizedLastName,
+    })
+    .eq("id", authUser.id);
+
+  if (profileUpdateError) {
+    return NextResponse.json(
+      { error: profileUpdateError.message },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ success: true });

@@ -63,7 +63,9 @@ function NavItem({ href, icon, title, isActive, collapsed }: NavItemProps) {
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 transition-all",
         isActive
-          ? "bg-foreground text-background"
+          ? href === "/admin/dashboard"
+            ? "bg-green-900 text-white"
+            : "bg-foreground text-background"
           : "text-muted-foreground hover:text-foreground hover:bg-muted",
         collapsed && "justify-center",
       )}

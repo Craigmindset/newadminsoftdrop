@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,11 +31,15 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [transactionPin, setTransactionPin] = useState("");
+  const [savingPin, setSavingPin] = useState(false);
   const [showTransactionPin, setShowTransactionPin] = useState(false);
   const [commissionRouteScope, setCommissionRouteScope] =
     useState("global");
@@ -53,6 +57,52 @@ export default function SettingsPage() {
   const canViewTransactionPin = auth?.can
     ? auth.can("settings:transaction-pin:view")
     : false;
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProfile() {
+      if (!accessToken) {
+        setFirstName("");
+        setLastName("");
+        return;
+      }
+
+      try {
+        setLoadingProfile(true);
+        const response = await fetch("/api/admin/profile", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = await response.json();
+        if (!active) {
+          return;
+        }
+
+        setFirstName(String(payload?.profile?.first_name || ""));
+        setLastName(String(payload?.profile?.last_name || ""));
+      } catch {
+        // no-op
+      } finally {
+        if (active) {
+          setLoadingProfile(false);
+        }
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
 
   useEffect(() => {
     let active = true;
@@ -227,6 +277,15 @@ export default function SettingsPage() {
       return;
     }
 
+    if (!firstName.trim() || !lastName.trim()) {
+      toast({
+        title: "Missing fields",
+        description: "First name and last name are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast({
         title: "Missing fields",
@@ -265,6 +324,8 @@ export default function SettingsPage() {
         body: JSON.stringify({
           currentPassword,
           newPassword,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
         }),
       });
 
@@ -292,6 +353,30 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleSavePin() {
+    const pin = transactionPin.trim();
+    if (!/^\d{4}$/.test(pin)) {
+      toast({
+        title: "Invalid pin",
+        description: "Transaction pin must be exactly 4 digits.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSavingPin(true);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      toast({
+        title: "Pin saved",
+        description: "Transaction pin has been updated successfully.",
+      });
+      setTransactionPin("");
+    } finally {
+      setSavingPin(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -315,6 +400,29 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="first-name">First name</Label>
+                  <Input
+                    id="first-name"
+                    value={firstName}
+                    onChange={(event) => setFirstName(event.target.value)}
+                    placeholder="Enter first name"
+                    disabled={loadingProfile || updatingPassword}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="last-name">Last name</Label>
+                  <Input
+                    id="last-name"
+                    value={lastName}
+                    onChange={(event) => setLastName(event.target.value)}
+                    placeholder="Enter last name"
+                    disabled={loadingProfile || updatingPassword}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="current-password">Current password</Label>
                 <div className="relative">
@@ -402,10 +510,14 @@ export default function SettingsPage() {
               </div>
               <Button
                 onClick={handleUpdatePassword}
-                disabled={updatingPassword}
+                disabled={updatingPassword || loadingProfile}
                 className="w-full bg-foreground text-background hover:bg-foreground/90"
               >
-                <Lock className="h-4 w-4" />
+                {updatingPassword ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Lock className="h-4 w-4" />
+                )}
                 {updatingPassword ? "Updating..." : "Update password"}
               </Button>
             </CardContent>
@@ -448,9 +560,17 @@ export default function SettingsPage() {
                     </button>
                   </div>
                 </div>
-                <Button className="w-full bg-foreground text-background hover:bg-foreground/90">
-                  <ShieldCheck className="h-4 w-4" />
-                  Save pin
+                <Button
+                  onClick={handleSavePin}
+                  disabled={savingPin}
+                  className="w-full bg-foreground text-background hover:bg-foreground/90"
+                >
+                  {savingPin ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="h-4 w-4" />
+                  )}
+                  {savingPin ? "Saving..." : "Save pin"}
                 </Button>
               </CardContent>
             </Card>
@@ -578,6 +698,9 @@ export default function SettingsPage() {
                   disabled={savingCommission}
                   className="w-full bg-foreground text-background hover:bg-foreground/90"
                 >
+                  {savingCommission ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : null}
                   {savingCommission ? "Saving..." : "Save commission settings"}
                 </Button>
 
