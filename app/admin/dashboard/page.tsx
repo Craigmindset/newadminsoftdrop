@@ -272,7 +272,7 @@ export default function AdminDashboard() {
               {stats.totalDeliveries.toLocaleString()}
             </div>
             <p className="text-xs text-red-600 dark:text-red-200">
-              Total requests from delivery_request
+              Total Package delivery
             </p>
           </CardContent>
         </Card>
